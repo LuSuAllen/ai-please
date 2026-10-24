@@ -701,4 +701,14 @@ PASS: 10/10 scenarios; 241 assertions; runtimeErrors=0   → /tmp/live-subtracti
 视口      390×844 与 1280×900 下 overflowX = 0
 ```
 
-证据图：`docs/shots/22-round8-home-start-cn-390.png`（390×844 首屏，`开始游戏 START GAME`）。
+证据图：`docs/shots/22-round8-home-start-cn-390.png`（本地构建 390×844 首屏）、`docs/shots/23-live-round8-home-start-cn-390.png`（线上首屏，按钮文案 `开始游戏 START GAME`）。
+
+### 14.10 线上复验（本轮）
+
+提交 `2899418` 推送 `main`（首次 push 遇到 `Recv failure: Operation timed out`，重试一次成功——网络问题，不是代码问题）→ `deploy.yml` 重建 → 线上 HTML 换成 `assets/index-CmbJwozc.js`（轮询第 4 次命中）。线上重跑：
+
+```text
+PASS: 10/10 scenarios; 241 assertions; runtimeErrors=0   → /tmp/live-round8
+```
+
+线上首屏按钮文案实测：`开始游戏 | START GAME`，`overflowX = 0`。

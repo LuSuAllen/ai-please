@@ -47,8 +47,16 @@ export function StatusBar({ day, index, total, funds, score, records, clock }: P
         </div>
       </div>
 
-      <div className="stat-progress" aria-hidden="true">
-        <div className="pip-track">
+      <div
+        className="stat-progress"
+        role="progressbar"
+        aria-label="访客判定进度"
+        aria-valuemin={0}
+        aria-valuemax={total}
+        aria-valuenow={records.length}
+        aria-valuetext={`已判 ${records.length} 位 · 共 ${total} 位`}
+      >
+        <div className="pip-track" aria-hidden="true">
           {Array.from({ length: total }).map((_, i) => {
             const rec = records[i];
             let cls = 'pip queued';

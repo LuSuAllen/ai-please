@@ -764,7 +764,7 @@ button {
   flex-direction: column;
   justify-content: flex-end;
   background: rgba(4, 6, 11, 0.7);
-  animation: fade-in 100ms steps(3, end);
+  animation: fade-in 120ms steps(3, end);
 }
 
 .drawer-panel {
@@ -1234,8 +1234,13 @@ button {
 }
 
 @media (max-width: 360px) {
+  /* 320 宽下 tier 不再整体隐藏：缩小并截断，信息仍然可达（S5-P8） */
   .pp-tier {
-    display: none;
+    max-width: 48%;
+    font-size: 7px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
 
@@ -1740,4 +1745,84 @@ a:focus-visible,
 [tabindex]:focus-visible {
   outline: 2px solid var(--cyan);
   outline-offset: 3px;
+}
+
+/* ---------- 第九轮：可达性与触控补齐（S5 系列） ---------- */
+
+/* 屏幕阅读器专用播报区（S5-A2）：视觉隐藏，对读屏可见 */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* 关卡选择：内联 style 收回到样式表（S5-H3） */
+.day-pick {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin: 10px 0 4px;
+}
+
+.day-pick .day-chip {
+  font-size: 10px;
+  padding: 6px 4px;
+  letter-spacing: 0.04em;
+  min-height: 40px;
+}
+
+.day-pick .day-chip-locked {
+  opacity: 0.45;
+}
+
+/* 次要 CTA 40px 触控高度（S5-H2 / S5-P7） */
+.btn-ghost {
+  min-height: 40px;
+}
+
+.btn {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* 信号等级文字：ALERT / WARN / INFO（S5-P3） */
+.signal .sig-level {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  white-space: nowrap;
+  padding-top: 1px;
+  opacity: 0.9;
+}
+
+/* 盖章副标题：11px + --ink-dim rgb(134,152,179)（S5-P6） */
+.stamp-sub {
+  font-size: 11px;
+  color: var(--ink-dim);
+}
+
+/* toast 操作按钮触控高度（S5-P7） */
+.toast .t-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+}
+
+/* 误判流水行左侧红条：不只靠颜色区分（S5-R2；#ff5470 on #0a1120 ≈ 6.1:1） */
+.log-row.bad {
+  border-left: 3px solid var(--red);
+  padding-left: 6px;
+}
+
+/* 矮屏（320×568）下首页可滚动且顶部不被居中裁切（S5-H4） */
+.home {
+  justify-content: safe center;
 }

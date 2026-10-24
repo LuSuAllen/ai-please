@@ -7,10 +7,12 @@ interface Props {
   record: ReviewRecord;
   visitor: Visitor;
   isLast: boolean;
+  /** 0 基访客序号：计分表只在前两位出现，避免每单都重复教学 */
+  index: number;
   onNext: () => void;
 }
 
-export function FeedbackOverlay({ record, visitor, isLast, onNext }: Props) {
+export function FeedbackOverlay({ record, visitor, isLast, index, onNext }: Props) {
   const dialogRef = useRef<HTMLDivElement>(null);
   useModalA11y(dialogRef);
   const ok = record.isCorrect;
@@ -56,13 +58,15 @@ export function FeedbackOverlay({ record, visitor, isLast, onNext }: Props) {
               </div>
             </div>
 
-            <div className="verdict-box">
-              <span className="vb-label">SCORING TABLE</span>
-              <div className="vb-text" style={{ fontSize: 10.5, color: 'var(--ink-dim)' }}>
-                CORRECT +{SCORE_TABLE.correct} · 误放行 {SCORE_TABLE.wrongApprove} · 误拒绝{' '}
-                {SCORE_TABLE.wrongDeny}
+            {index < 2 ? (
+              <div className="verdict-box">
+                <span className="vb-label">SCORING TABLE</span>
+                <div className="vb-text" style={{ fontSize: 10.5, color: 'var(--ink-dim)' }}>
+                  CORRECT +{SCORE_TABLE.correct} · 误放行 {SCORE_TABLE.wrongApprove} · 误拒绝{' '}
+                  {SCORE_TABLE.wrongDeny}
+                </div>
               </div>
-            </div>
+            ) : null}
           </div>
         </div>
 

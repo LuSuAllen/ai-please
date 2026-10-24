@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { TutorialSheet } from '../components/TutorialSheet';
 import { DAY_IDS, getBlueprint } from '../data/levels';
+import { rulesForEvents } from '../data/rules';
 import type { Meta } from '../game/storage';
 
 interface Props {
@@ -17,6 +18,8 @@ export function HomeScreen({ onStart, onResume, hasSave, meta, savedIndex, total
   const unlockedIdx = Math.max(0, DAY_IDS.indexOf(meta.unlockedDay as (typeof DAY_IDS)[number]));
   const [day, setDay] = useState<string>(DAY_IDS[unlockedIdx]);
   const blueprint = getBlueprint(day);
+  // 规则数由本关实际事件推导（D01=6、D03=7），不再写死「七条规则」
+  const ruleCount = blueprint ? rulesForEvents(blueprint.events).length : 0;
   const locked = DAY_IDS.indexOf(day as (typeof DAY_IDS)[number]) > unlockedIdx;
 
   return (
@@ -35,14 +38,14 @@ export function HomeScreen({ onStart, onResume, hasSave, meta, savedIndex, total
         <div className="home-rule" />
 
         <div className="home-desc">
-          你是 04 号窗口的审核员。{blueprint ? blueprint.visitorCount : '?'} 位访客，七条规则，
+          你是 04 号窗口的审核员。{blueprint ? blueprint.visitorCount : '?'} 位访客，{ruleCount} 条规则，
           {blueprint && blueprint.events.length > 0 ? '数次名单与命令变更，' : '一份自相矛盾的紧急命令，'}
           每一班都重新洗牌。
           <br />
           核对信息，找出异常，再承担判定。
         </div>
 
-        <div className="day-pick" role="group" aria-label="选择关卡" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, margin: '10px 0 4px' }}>
+        <div className="day-pick" role="group" aria-label="选择关卡">
           {DAY_IDS.map((id, i) => {
             const bp = getBlueprint(id);
             const isLocked = i > unlockedIdx;
@@ -51,11 +54,11 @@ export function HomeScreen({ onStart, onResume, hasSave, meta, savedIndex, total
               <button
                 key={id}
                 type="button"
-                className={`btn ${day === id ? 'btn-approve' : 'btn-ghost'}`}
+                className={`btn day-chip ${day === id ? 'btn-approve' : 'btn-ghost'}${isLocked ? ' day-chip-locked' : ''}`}
                 disabled={isLocked}
                 aria-pressed={day === id}
+                aria-label={`${id} ${isLocked ? '未解锁' : best > 0 ? `BEST ${best}` : bp ? `${bp.visitorCount} 位访客` : ''}`}
                 onClick={() => setDay(id)}
-                style={{ fontSize: 10, padding: '6px 4px', letterSpacing: '0.04em', opacity: isLocked ? 0.45 : 1 }}
               >
                 {id}
                 <br />
@@ -66,11 +69,6 @@ export function HomeScreen({ onStart, onResume, hasSave, meta, savedIndex, total
         </div>
 
         <div className="home-buttons">
-          {hasSave ? (
-            <button type="button" className="btn btn-wide" onClick={onResume}>
-              RESUME · 第 {String(savedIndex + 1).padStart(2, '0')} / {total} 位
-            </button>
-          ) : null}
           <button
             type="button"
             className="btn btn-wide btn-approve"
@@ -80,6 +78,11 @@ export function HomeScreen({ onStart, onResume, hasSave, meta, savedIndex, total
             开始游戏
             <small>{hasSave ? 'START NEW SHIFT' : 'START GAME'}</small>
           </button>
+          {hasSave ? (
+            <button type="button" className="btn btn-wide" onClick={onResume}>
+              RESUME · 第 {String(savedIndex + 1).padStart(2, '0')} / {total} 位
+            </button>
+          ) : null}
           <button type="button" className="btn btn-wide btn-ghost" onClick={() => setHowTo(true)}>
             VIEW HOW TO PLAY
           </button>

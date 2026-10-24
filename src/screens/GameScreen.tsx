@@ -57,16 +57,21 @@ export function GameScreen(props: Props) {
   );
 
   // 盖章：立刻派发判定（分数与状态由 engine 单一来源计算），章落定后再移交反馈层。
-  // 用 STAMP_MS 而不是监听 animationend —— reduced-motion 会把动画压到 0.01ms。
+  // reduced-motion 下动画被压到 0.01ms，等待必须同步归零；默认 340ms 对齐 stamp-in 320ms。
+  // STAMP_MS 只作为上限兜底，不再作为固定等待时长。
   function handleStamp(move: Verdict) {
     if (stamp !== null || state.phase !== 'playing' || state.pendingUpdate !== null) return;
     setStamp(move);
     props.onMove(move);
+    const reduced =
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const wait = Math.min(reduced ? 0 : 340, STAMP_MS);
     timerRef.current = window.setTimeout(() => {
       timerRef.current = null;
       setStamp(null);
       setPassportOpen(false);
-    }, STAMP_MS);
+    }, wait);
   }
 
   const lockActions = state.phase !== 'playing' || state.pendingUpdate !== null;
@@ -103,6 +108,7 @@ export function GameScreen(props: Props) {
               <div className="signal-stack">
                 {visitor.signals.map((s) => (
                   <div key={s.code} className={`signal ${s.level}`}>
+                    <span className="sig-level">{s.level.toUpperCase()}</span>
                     <span className="sig-code">{s.code}</span>
                     <span>{s.label}</span>
                   </div>
@@ -192,9 +198,17 @@ export function GameScreen(props: Props) {
           record={state.lastRecord}
           visitor={visitor}
           isLast={isLast}
+          index={state.records.length - 1}
           onNext={props.onNext}
         />
       ) : null}
+
+      {/* 屏幕阅读器播报：只播判定结果，不泄露解释与答案 */}
+      <div className="sr-only" role="status" aria-live="polite">
+        {state.lastRecord
+          ? `第 ${state.records.length} 位：判定 ${state.lastRecord.move}，${state.lastRecord.isCorrect ? '正确' : '错误'}`
+          : ''}
+      </div>
     </div>
   );
 }

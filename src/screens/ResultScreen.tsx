@@ -57,10 +57,12 @@ export function ResultScreen({ state, bestScore, onRestart, onHome }: Props) {
             <span className="v">{state.inspectedCount}</span>
           </div>
           <div className="result-cell">
-            <span className="k">MISJUDGED · 误判</span>
-            <span className={`v ${wrong > 0 ? 'neg' : ''}`}>
-              {wrongApprove} / {wrongDeny}
-            </span>
+            <span className="k">误放行 · WRONG APPROVE</span>
+            <span className={`v ${wrongApprove > 0 ? 'neg' : ''}`}>{wrongApprove}</span>
+          </div>
+          <div className="result-cell">
+            <span className="k">误拒绝 · WRONG DENY</span>
+            <span className={`v ${wrongDeny > 0 ? 'neg' : ''}`}>{wrongDeny}</span>
           </div>
           <div className="result-cell conclusion">
             <span className="k">FINAL SCORE · 总分</span>
@@ -96,9 +98,8 @@ export function ResultScreen({ state, bestScore, onRestart, onHome }: Props) {
           <div className="panel-body">
             <div className="log">
               {state.records.map((r) => {
-                const v = visitors.find((x) => x.id === r.visitorId);
                 return (
-                  <div className="log-row" key={r.visitorId}>
+                  <div className={`log-row${r.isCorrect ? '' : ' bad'}`} key={r.visitorId}>
                     <span className="mv">{r.code}</span>
                     <span className={r.isCorrect ? 'ok' : 'no'}>
                       {r.move} → {r.correct}
@@ -108,7 +109,6 @@ export function ResultScreen({ state, bestScore, onRestart, onHome }: Props) {
                       {r.scoreDelta > 0 ? '+' : ''}
                       {r.scoreDelta}
                     </span>
-                    <span style={{ display: 'none' }}>{v?.name}</span>
                   </div>
                 );
               })}

@@ -1766,7 +1766,8 @@ a:focus-visible,
 /* 关卡选择：内联 style 收回到样式表（S5-H3） */
 .day-pick {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  /* 第十轮：3 → 4 关后改为自适应列宽；64px 是 320 宽下 chip 内文字不小于 40×40 触控目标的边界 */
+  grid-template-columns: repeat(auto-fit, minmax(64px, 1fr));
   gap: 6px;
   margin: 10px 0 4px;
 }

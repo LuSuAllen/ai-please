@@ -1,4 +1,5 @@
 import type { DayBlueprint } from '../types/game';
+import { composeBlueprint, LEVEL_SPECS } from './specs.ts';
 
 /**
  * 关卡蓝图：只描述"这一天的骨架"——人数、配额、事件时点、手工卡槽。
@@ -81,7 +82,19 @@ export const BLUEPRINTS: Record<string, DayBlueprint> = {
   },
 };
 
-export const DAY_IDS = ['D01', 'D02', 'D03'] as const;
+/**
+ * 冻结区：D01–D03 是手写字面量，快照哈希 `6ea6656d4ab9ad0e`（72 组）证明它们一字未动。
+ * 新关只允许经 specs.ts 的配方进入，见 composeBlueprint / lintBlueprint。
+ */
+export const LEGACY_DAY_IDS = ['D01', 'D02', 'D03'] as const;
+
+for (const spec of LEVEL_SPECS) {
+  const bp = composeBlueprint(spec);
+  if (BLUEPRINTS[bp.id]) throw new Error(`关卡配方与冻结蓝图重名：${bp.id}`);
+  BLUEPRINTS[bp.id] = bp;
+}
+
+export const DAY_IDS = [...LEGACY_DAY_IDS, ...LEVEL_SPECS.map((s) => s.id)] as const;
 
 export function getBlueprint(dayId: string): DayBlueprint | null {
   return BLUEPRINTS[dayId] ?? null;

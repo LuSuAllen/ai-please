@@ -662,7 +662,9 @@ CSS 侧同样全量比对（`.class` 出现次数 vs `.tsx/.ts`），**0 个死�
 PASS: 10/10 scenarios; 241 assertions; runtimeErrors=0   → /tmp/live-subtraction
 ```
 
-线上证据：`docs/shots/19-live-round7-broadcast.png`（线上广播锁操作）、`docs/shots/20-round7-preload-home.png`（线上首屏）。
+提交 `5809594`（死导出清理，产物哈希不变——`PASSPORT_STAMP_MS` 本就被 Rollup 摇掉，说明树摇一直在生效）再次推送并复跑，仍是 10/10 · 241 断言。
+
+线上证据：`docs/shots/19-live-round7-broadcast.png`（线上广播锁操作）、`docs/shots/20-round7-preload-home.png`（线上首屏）、`docs/shots/21-live-round7-d03-390.png`（线上 D03 在 390×844 的竖屏排版，横向溢出 0px）。
 
 ### 14.8 本轮净收益
 

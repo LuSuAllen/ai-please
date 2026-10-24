@@ -77,7 +77,8 @@ export function HomeScreen({ onStart, onResume, hasSave, meta, savedIndex, total
             onClick={() => onStart(day)}
             disabled={locked}
           >
-            {hasSave ? 'START NEW SHIFT' : 'START GAME'}
+            开始游戏
+            <small>{hasSave ? 'START NEW SHIFT' : 'START GAME'}</small>
           </button>
           <button type="button" className="btn btn-wide btn-ghost" onClick={() => setHowTo(true)}>
             VIEW HOW TO PLAY

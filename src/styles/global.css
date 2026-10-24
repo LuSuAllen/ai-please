@@ -365,10 +365,6 @@ button {
   box-shadow: inset 0 0 0 2px #0a1220;
 }
 
-.visitor-meta {
-  min-width: 0;
-  flex: 1;
-}
 
 .visitor-code {
   font-size: 9px;
@@ -391,20 +387,9 @@ button {
   color: var(--ink-faint);
 }
 
-.visitor-service {
-  margin-top: 6px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
 
 /* ---------- 信息栅格 ---------- */
 
-.info-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-}
 
 .info-row {
   display: grid;
@@ -440,10 +425,6 @@ button {
 
 .info-val .dim {
   color: var(--ink-dim);
-}
-
-.info-val .hl {
-  color: var(--cyan);
 }
 
 .mono-num {
@@ -526,11 +507,6 @@ button {
 
 /* ---------- 规则面板 ---------- */
 
-.rule-chip-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
 
 .rule-toggle {
   flex: 0 0 auto;

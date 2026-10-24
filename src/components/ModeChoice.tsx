@@ -30,16 +30,13 @@ export function ModeChoice({ day, conflictCode, onChoose }: Props) {
                 R07 说边境中立区一律豁免，且优先级高于 R01。
                 <br />
                 <br />
-                现在，系统要求你说明你的执行立场。这个选择决定你的结局归档。
+                现在，系统要求你说明你的执行立场。
               </>
             ) : (
               <>
                 这一班没有遇到互相矛盾的命令，但你仍然要为自己的执行立场归档：
                 <br />
                 是把每一次判断都交回条文，还是把条文当作需要解释的东西？
-                <br />
-                <br />
-                这个选择不改动已产生的分数，只决定你的结局。
               </>
             )}
           </p>
@@ -48,13 +45,13 @@ export function ModeChoice({ day, conflictCode, onChoose }: Props) {
             <button type="button" className="mode-card strict" onClick={() => onChoose('STRICT')}>
               <div className="mc-title">STRICT MODE</div>
               <div className="mc-desc">
-                条文即秩序。名单之外一律不放。可审计、可追责，也可能挡掉本该通过的人。
+                条文即秩序。名单之外一律不放，可审计，也可能挡掉本该通过的人。
               </div>
             </button>
             <button type="button" className="mode-card human" onClick={() => onChoose('HUMAN')}>
               <div className="mc-title">HUMAN MODE</div>
               <div className="mc-desc">
-                先读人，再读条文。承认规则会出错，并为自己的每一次判断负责。
+                先读人，再读条文。承认规则会出错，并为判断负责。
               </div>
             </button>
           </div>

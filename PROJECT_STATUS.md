@@ -329,3 +329,52 @@ node /tmp/cdp-e2e.mjs        # 14 passed / 0 failed
 | 320×568 首屏需滚动 | 护照内页在 320 下需纵向滚动才能看到 MRZ；判定栏与章位仍常驻 |
 | 1280×800 桌面演示需滚动 | 舞台 9:16 被视口高度限制，内容区滚动；仅演示场景 |
 | 护照号为派生值 | 与访客数据同源（`avatarSeed`），不参与任何判定，避免"看起来像线索"的误导 |
+
+---
+
+## 11. 上线记录：GitHub Pages（2026-10-24 第四轮）
+
+**线上地址：https://lusuallen.github.io/ai-please/**（项目页；与个人站 `lusuallen.github.io` 根域共存，互不影响）
+
+### 11.1 发布链路
+
+| 环节 | 配置 |
+| --- | --- |
+| 生产 base | `/ai-please/`（`vite.config.ts` 按 `command` 切换，dev 仍是 `/`） |
+| SPA 刷新回退 | `scripts/postbuild.mjs` 把 `dist/index.html` 复制成 `dist/404.html` |
+| Jekyll 拦截 | `scripts/postbuild.mjs` 写 `dist/.nojekyll` |
+| 源码映射 | `build.sourcemap: false`（线上不带 `.map`） |
+| 自动发版 | `.github/workflows/deploy.yml`：push `main` → `npm ci` → `npm run build` → `upload-pages-artifact` → `deploy-pages` |
+| Pages 开通 | `actions/configure-pages@v5` + `enablement: true`（首次用工作流 token 自动开通，无需网页点击） |
+| 首次发布 | Actions run **#1 success**，`https://api.github.com/repos/LuSuAllen/ai-please/pages` 创建返回 201，`build_type=workflow` |
+
+### 11.2 线上验收（在 `https://lusuallen.github.io/ai-please/` 真实地址上跑，不是本地 preview）
+
+| 断言 | 实测 | 结果 |
+| --- | --- | --- |
+| `location.origin` | `https://lusuallen.github.io` | ✅ |
+| 首页渲染 | `.home-kicker` 命中 | ✅ |
+| 资源 200 且同源 | `/ai-please/assets/index-B9MM_T1v.js` 200 `application/javascript`、`/ai-please/assets/index-kDIcALA7.css` 200 `text/css` | ✅ |
+| 深链接刷新 | `/ai-please/some/deep/route` 返回 404 状态但内容与首页字节一致（404.html 回落） | ✅ |
+| 根路径跳转 | `https://lusuallen.github.io/ai-please` → 301 → `/ai-please/` | ✅ |
+| 全流程 | 10 位访客全判对；7 位走护照盖章 / 3 位走底部三键 → `HUMAN` → `S · 边境之星 / 1000 / ¥2125 / THE DOOR` | ✅ 14/14 |
+| 存档 | `localStorage` 写入 `["ai-please:meta:v2","ai-please:run:v2"]`；刷新 `RESUME 第 02 位` | ✅ |
+| 移动端 | 390×844 `overflowX = 0` | ✅ |
+| 干净度 | 0 网络失败、0 console error、0 未捕获异常 | ✅ |
+
+线上冒烟合计 **13 项**、线上全流程回归 **14 项**，全绿。
+截图 `docs/shots/12-live-production.png` 为线上真地址实拍。
+
+### 11.3 运维事实
+
+- **发版方式**：`git push origin main` 即自动构建发布（约 40–70 秒）。
+- **回滚**：`git revert <commit> && git push`，或 Actions 页面 re-run 上一个成功部署。
+- **存档隔离**：换域名 = 换 origin，`127.0.0.1:5173` 的本地存档不会带到线上（浏览器同源策略）。存档 key 带 `:v2` schema 版本，结构升级不会读坏旧档。
+- **本地预览线上形态**：`npm run build && npm run preview` → `http://127.0.0.1:4173/ai-please/`。
+
+### 11.4 已知限制
+
+| 限制 | 说明 |
+| --- | --- |
+| 首次发布前无任何凭据 | 本机两个旧 token 已吊销（API 401），最终由用户提供 PAT 完成首推；**上线后建议 Revoke 该 token** |
+| 无自定义域名 | 当前用项目页路径；若要 `ai-please.allen-diginet.com`，需在 DNSPod 加一条 CNAME → `lusuallen.github.io`，并在 workflow 的 `configure-pages` 补 `cname` |

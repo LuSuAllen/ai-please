@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
+import { useModalA11y } from '../hooks/useModalA11y';
 import type { CSSProperties, MouseEvent } from 'react';
 import type { Verdict, Visitor } from '../types/game';
 import { REGION_MAP, SERVICE_MAP } from '../data/regions';
@@ -30,13 +31,8 @@ export function PassportZoom({ visitor, inspected, stamp, onStamp, onClose }: Pr
   const [z, setZ] = useState(1);
   const [origin, setOrigin] = useState('0px 0px');
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useModalA11y(dialogRef, { dismissible: true, onDismiss: onClose });
 
   function reset(nz: number) {
     setZ(nz);
@@ -80,7 +76,7 @@ export function PassportZoom({ visitor, inspected, stamp, onStamp, onClose }: Pr
   ];
 
   return (
-    <div className="pp-overlay">
+    <div className="pp-overlay" ref={dialogRef} role="dialog" aria-modal="true" aria-label={`护照详情 · ${visitor.name}`} tabIndex={-1}>
       <div className="pp-sheet ppz-sheet">
         <div className="ppz-head" data-no-zoom>
           <span className="ppz-title">PASSPORT · {visitor.code}</span>

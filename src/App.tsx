@@ -6,19 +6,19 @@ import { useGame } from './hooks/useGame';
 import { loadMeta, loadRun, type Meta } from './game/storage';
 
 export default function App() {
-  const { state, visitor, total, actions } = useGame();
+  const { state, visitor, total, actions, storageFailure } = useGame();
   const [meta, setMeta] = useState<Meta>(() => loadMeta());
   const [savedIndex, setSavedIndex] = useState<number>(() => loadRun()?.index ?? 0);
   const [hasSave, setHasSave] = useState<boolean>(() => {
     const run = loadRun();
-    return !!run && run.index > 0 && run.index < 10;
+    return !!run && run.index >= 0 && run.index < 10;
   });
 
   useEffect(() => {
     if (state.phase === 'home' || state.phase === 'result') {
       setMeta(loadMeta());
       const run = loadRun();
-      setHasSave(!!run && run.index > 0 && run.index < 10);
+      setHasSave(!!run && run.index >= 0 && run.index < 10);
       setSavedIndex(run?.index ?? 0);
     }
   }, [state.phase]);
@@ -27,6 +27,11 @@ export default function App() {
 
   return (
     <div className="shell">
+      {storageFailure ? (
+        <div className="storage-warning" role="status" aria-live="polite">
+          本局尚未保存，仍可继续；刷新或关闭可能丢失进度。
+        </div>
+      ) : null}
       {state.phase === 'home' ? (
         <HomeScreen
           onStart={actions.start}

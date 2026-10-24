@@ -1,7 +1,22 @@
-/* ============================================================
-   AI, PLEASE — pixel terminal design system
-   硬边框 / 硬阴影 / 零圆角 / 无外部字体依赖
-   ============================================================ */
+.storage-warning {
+  position: fixed;
+  z-index: 100;
+  top: max(8px, env(safe-area-inset-top));
+  left: 50%;
+  width: min(92vw, 430px);
+  transform: translateX(-50%);
+  padding: 8px 10px;
+  border: 2px solid var(--amber);
+  background: var(--storage-bg);
+  color: var(--amber);
+  box-shadow: 3px 3px 0 #000;
+  font-size: 10px;
+  line-height: 1.45;
+  text-align: center;
+  pointer-events: none;
+}
+
+/* 硬边框 / 硬阴影 / 零圆角 / 无外部字体依赖 */
 
 :root {
   --bg: #05070d;
@@ -18,6 +33,7 @@
   --green: #3ef08a;
   --amber: #f5c451;
   --red: #ff5470;
+  --storage-bg: #231a08;
   --purple: #9b7bff;
 
   --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
@@ -1722,4 +1738,30 @@ button {
     transform: rotate(6deg) scale(1);
     opacity: 1;
   }
+}
+
+/* Accessibility additions: preserve square pixel controls and visible keyboard focus. */
+.pp-open,
+.pp-portrait,
+.pp-slots,
+.ppz-actions button,
+.drawer .sheet-head button {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.pp-slots {
+  width: 100%;
+  text-align: center;
+}
+
+.pp-slots .pp-slot {
+  justify-content: center;
+}
+
+button:focus-visible,
+a:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 3px;
 }

@@ -1,10 +1,12 @@
-import { useCallback, useEffect, useMemo, useReducer } from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useSyncExternalStore } from 'react';
 import { VISITORS } from '../data/visitors';
 import { RULE_UPDATES } from '../data/rules';
 import { FUNDS_TABLE, START_FUNDS, resolveReview } from '../game/engine';
 import type { GameState, Mode, Move } from '../types/game';
 import {
   clearRun,
+  getStorageFailure,
+  subscribeStorageFailure,
   loadMeta,
   loadRun,
   saveMeta,
@@ -71,25 +73,30 @@ function reducer(state: GameState, action: Action): GameState {
     case 'RESUME': {
       const { run } = action;
       const safeIndex = Math.min(Math.max(run.index, 0), VISITORS.length - 1);
+      const completed = run.index >= VISITORS.length || run.records.length >= VISITORS.length;
+      const seenUpdates = run.seenUpdates ?? RULE_UPDATES.filter((u) => u.atIndex < safeIndex).map((u) => u.atIndex);
+      const phase = completed ? 'verdict' : (run.phase ?? 'playing');
       return {
         ...state,
-        phase: 'playing',
+        phase,
         index: safeIndex,
         score: run.score,
         funds: run.funds,
-        inspected: false,
+        inspected: run.inspected ?? (run.inspectedCount > run.records.filter((record) => record.inspected).length),
         inspectedCount: run.inspectedCount,
         records: run.records,
-        lastRecord: null,
+        seenUpdates,
+        lastRecord: phase === 'feedback' ? (run.lastRecord ?? run.records[run.records.length - 1] ?? null) : null,
         mode: null,
         ruleDrawerOpen: false,
-        pendingUpdate: null,
+        pendingUpdate: phase === 'playing' ? nextUpdateAt(safeIndex, seenUpdates) : null,
         tutorialOpen: false,
       };
     }
 
     case 'MOVE': {
-      if (state.phase !== 'playing') return state;
+      if (state.phase !== 'playing' || state.pendingUpdate) return state;
+      if (action.move === 'INSPECT') return reducer(state, { type: 'INSPECT' });
       const visitor = VISITORS[state.index];
       if (!visitor) return state;
       const record = resolveReview(visitor, action.move, state.inspected);
@@ -104,7 +111,7 @@ function reducer(state: GameState, action: Action): GameState {
     }
 
     case 'INSPECT': {
-      if (state.phase !== 'playing' || state.inspected) return state;
+      if (state.phase !== 'playing' || state.pendingUpdate || state.inspected) return state;
       return {
         ...state,
         inspected: true,
@@ -179,16 +186,22 @@ export function useGame() {
 
   // 进度落盘：刷新后可以接着审，不出现死局
   useEffect(() => {
-    if (state.phase === 'playing' || state.phase === 'feedback') {
+    if (state.phase === 'playing' || state.phase === 'feedback' || state.phase === 'verdict') {
       saveRun({
-        index: state.phase === 'feedback' ? state.index + 1 : state.index,
+        index: state.index,
+        phase: state.phase,
+        inspected: state.inspected,
+        seenUpdates: state.seenUpdates,
+        pendingUpdate: state.pendingUpdate,
+        lastRecord: state.lastRecord,
         score: state.score,
         funds: state.funds,
         inspectedCount: state.inspectedCount,
         records: state.records,
       });
     }
-  }, [state.phase, state.index, state.score, state.funds, state.inspectedCount, state.records]);
+  }, [state.phase, state.index, state.score, state.funds, state.inspectedCount, state.records,
+    state.inspected, state.seenUpdates, state.pendingUpdate, state.lastRecord]);
 
   // 结算时写最高分并清空临时存档
   useEffect(() => {
@@ -212,9 +225,10 @@ export function useGame() {
 
   const resume = useCallback(() => {
     const run = loadRun();
-    if (run && run.index < VISITORS.length) dispatch({ type: 'RESUME', run });
+    if (run) dispatch({ type: 'RESUME', run });
   }, []);
 
+  const storageFailure = useSyncExternalStore(subscribeStorageFailure, getStorageFailure, () => null);
   const savedRun = useMemo(() => loadRun(), []);
 
   return {
@@ -222,6 +236,7 @@ export function useGame() {
     visitor,
     total,
     savedRun,
+    storageFailure,
     actions: {
       start,
       move,

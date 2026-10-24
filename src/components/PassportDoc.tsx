@@ -101,16 +101,16 @@ export function PassportDoc({ visitor, inspected, onOpen }: Props) {
           <span className="pp-reason-text">{visitor.reason}</span>
         </div>
 
-        <div className="pp-slots" onClick={onOpen} role="presentation">
-          <div className="pp-slot">
+        <button type="button" className="pp-slots" onClick={onOpen} aria-label="查看护照详情">
+          <span className="pp-slot">
             <span className="pp-slot-word">APPROVE</span>
             <span className="pp-slot-state">NOT STAMPED</span>
-          </div>
-          <div className="pp-slot deny">
+          </span>
+          <span className="pp-slot deny">
             <span className="pp-slot-word">DENY</span>
             <span className="pp-slot-state">NOT STAMPED</span>
-          </div>
-        </div>
+          </span>
+        </button>
 
         <div className="pp-mrz">
           {`P<${visitor.ipRegion}${visitor.alias.replace(/[^A-Z]/g, '')}<<${passport.no.replace('-', '')}`}

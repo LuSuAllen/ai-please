@@ -1,3 +1,5 @@
+import { useRef } from 'react';
+import { useModalA11y } from '../hooks/useModalA11y';
 import { REGIONS, isOpen } from '../data/regions';
 import { activeRules } from '../data/rules';
 
@@ -26,11 +28,13 @@ interface DrawerProps {
 
 /** 全屏抽屉，挂在 stage 层级 */
 export function RuleDrawer({ index, onClose }: DrawerProps) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useModalA11y(dialogRef, { dismissible: true, onDismiss: onClose });
   const rules = activeRules(index);
   const freshCode = index >= 8 ? 'R07' : index >= 3 ? 'R06' : null;
 
   return (
-    <div className="drawer" role="dialog" aria-modal="true" aria-label="今日审核规则">
+    <div className="drawer" ref={dialogRef} role="dialog" aria-modal="true" aria-label="今日审核规则" tabIndex={-1}>
       <div className="drawer-panel">
         <div className="sheet-head">
           <span>DAY 01 · RULES OF THE DAY</span>

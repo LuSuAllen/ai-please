@@ -1,3 +1,5 @@
+import { useRef } from 'react';
+import { useModalA11y } from '../hooks/useModalA11y';
 import type { ReviewRecord, Visitor } from '../types/game';
 import { SCORE_TABLE } from '../game/engine';
 
@@ -9,12 +11,14 @@ interface Props {
 }
 
 export function FeedbackOverlay({ record, visitor, isLast, onNext }: Props) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useModalA11y(dialogRef);
   const ok = record.isCorrect;
   const moveLabel =
     record.move === 'APPROVE' ? 'APPROVED' : record.move === 'DENY' ? 'DENIED' : 'INSPECTED';
 
   return (
-    <div className="overlay">
+    <div className="overlay" ref={dialogRef} role="dialog" aria-modal="true" aria-label="审核结果" tabIndex={-1}>
       <div className="sheet">
         <div className="sheet-head">
           <span>{ok ? 'VERDICT ACCEPTED' : 'VERDICT REJECTED BY AUDIT'}</span>

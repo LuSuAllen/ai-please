@@ -44,7 +44,7 @@ export function HomeScreen({ onStart, onResume, hasSave, bestScore, savedIndex, 
             {hasSave ? 'START NEW SHIFT' : 'START GAME'}
           </button>
           <button type="button" className="btn btn-wide btn-ghost" onClick={() => setHowTo(true)}>
-            HOW TO PLAY
+            VIEW HOW TO PLAY
           </button>
         </div>
 
@@ -53,7 +53,7 @@ export function HomeScreen({ onStart, onResume, hasSave, bestScore, savedIndex, 
         </div>
       </div>
 
-      {howTo ? <TutorialSheet onClose={() => setHowTo(false)} /> : null}
+      {howTo ? <TutorialSheet onClose={() => setHowTo(false)} context="home" /> : null}
     </div>
   );
 }

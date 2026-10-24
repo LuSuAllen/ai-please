@@ -1,3 +1,5 @@
+import { useRef } from 'react';
+import { useModalA11y } from '../hooks/useModalA11y';
 import type { Mode } from '../types/game';
 
 interface Props {
@@ -5,8 +7,10 @@ interface Props {
 }
 
 export function ModeChoice({ onChoose }: Props) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useModalA11y(dialogRef);
   return (
-    <div className="overlay">
+    <div className="overlay" ref={dialogRef} role="dialog" aria-modal="true" aria-label="立场确认" tabIndex={-1}>
       <div className="sheet">
         <div className="sheet-head">
           <span>DAY 01 COMPLETE · 立场确认</span>

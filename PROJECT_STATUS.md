@@ -1,7 +1,7 @@
 # PROJECT STATUS — AI, PLEASE / AI SERVICE BORDER INSPECTOR
 
 > 本文件是唯一事实来源。凡是没在这里贴出验证证据的东西，一律视为"未测试"。
-> 最后更新：2026-10-24（第三轮：护照 GUI 落地 + 43 项断言复验）
+> 最后更新：2026-10-24（第五轮：存档公平性 + 三步教学 + 无障碍，10/10 场景 + 25 项全流程回归全过）
 
 ---
 
@@ -15,9 +15,10 @@
 | 阶段 2.5 | 护照 GUI（查看 → 放大 → 盖章/拒签） | ✅ 完成，43 项断言全过 |
 | 阶段 3 | 规则与评分 | ✅ 已落地并验证 |
 | 阶段 4 | 特殊事件与剧情 | ✅ 已落地并验证 |
+| 阶段 2.8 | 稳定性与无障碍（存档恢复公平性 / 三步教学 / 弹层键盘语义） | ✅ 完成，10 场景 104 断言 + 25 项全流程回归全过 |
 | 阶段 5 | 现场展示优化 | ⬜ 待开始 |
 
-**当前阻塞：无。护照场景已按用户需求实现（§10）；等用户对 §6 中 ★1–★5 的结构性调整签字（涉及层级重排与玩法取舍），再动阶段 2 后半段。**
+**当前阻塞：无。用户已授权按优先级连续推进（不再逐项确认），第五轮已交付并复验（§12）。§6 中 ★2 已落地；★1/★3/★4/★5 涉及玩法数值与首屏信息取舍，仍按「需签字」保留。**
 
 ---
 
@@ -143,7 +144,7 @@ $ npx tsc --noEmit
 | # | 问题 | 建议改法 | 成本 |
 | --- | --- | --- | --- |
 | ★1 | 首屏没有动词：最大的元素是标题，`APPROVE` / `DENY` 在首屏一次都不出现 | 标题下第一行改成「你是 04 号窗口的边境审核员」（14px `--ink`），第二行「核对 AI 服务申请 · 放行 或 拒绝」（动作词双色），加两枚静态印章 | 仅 `HomeScreen.tsx` + 字号 |
-| ★2 | 点 START 立刻撞上 6 步文字墙 | 压到 3 步（你是谁 / 核哪四项 / 怎么判），规则会变、立场、计分表下沉到对应时刻再教 | 仅 `TutorialSheet.tsx` |
+| ★2 | 点 START 立刻撞上 6 步文字墙 | ✅ **已落地**：压到 3 步 + 上一步回看 + 跳过说明 + 首页上下文收尾文案（本轮 §12.1） | 仅 `TutorialSheet.tsx` |
 | ★3 | 两个道德难题被线索直接写了结论（V-007「非申请人行为导致」、V-010「优先级高于 R01」） | 线索只给事实，判断留给玩家 | 仅 `visitors.ts` 两句话 |
 | ★4 | 结算页 8 格诊断信息压在结局之上 | 顺序改为 评级 → 结局卡（主角，标题 12→20px）→ 4 格数字 → 流水折叠 → 按钮 | `ResultScreen.tsx` |
 | ★5 | 资金只增不减（判对 +120、唯一支出 ¥25），最优解是"每单都开档"，取舍消失 | 改成 10 次开档额度（QUOTA），或删掉第二货币只留分数 | 改 `engine.ts` 数值语义 |
@@ -162,7 +163,7 @@ $ npx tsc --noEmit
 
 ### P2 — 打磨
 
-13 桌面端内容区滚动无提示（仅演示用）· 14 密封态 DEEP FILE 只为一行提示（现已随剩余高度自适应，`max-height:168px`）· 15 新手说明缺 SKIP · 16 ✅ `STAMP_MS` 已复活（`engine.ts:18` → 盖章到反馈的 900ms 间隔，实测 920–942ms）。
+13 桌面端内容区滚动无提示（仅演示用）· 14 密封态 DEEP FILE 只为一行提示（现已随剩余高度自适应，`max-height:168px`）· 15 ✅ 新手说明已有「跳过说明 / 上一步」（本轮）· 16 ✅ `STAMP_MS` 已复活（`engine.ts:18` → 盖章到反馈的 900ms 间隔，实测 920–942ms）。
 
 ---
 
@@ -170,7 +171,7 @@ $ npx tsc --noEmit
 
 | 限制 | 影响 | 处置 |
 | --- | --- | --- |
-| 本机 git 不可用（`/usr/local/bin/git` 报 Bad CPU type；`/usr/bin/git` 未同意 Xcode license） | 无法版本控制 | 不影响开发运行；需要时修复 Xcode license |
+| `git` 只能走 `/Applications/Xcode.app/Contents/Developer/usr/bin/git`（`/usr/local/bin/git` 报 Bad CPU type，`/usr/bin/git` 被 Xcode license 拦） | 直接敲 `git` 会失败 | 已在 §11/§12 的命令里显式指定该路径 |
 | headless 下 `env(safe-area-inset-*)` 恒为 0 | 刘海屏与底部手势条未实测 | 布局已用 `env()` 兜底，需真机复核一次 |
 | 320×568 主内容区需要滚动 | 主操作按钮仍常驻吸底 | 可接受 |
 
@@ -378,3 +379,82 @@ node /tmp/cdp-e2e.mjs        # 14 passed / 0 failed
 | --- | --- |
 | 首次发布前无任何凭据 | 本机两个旧 token 已吊销（API 401），最终由用户提供 PAT 完成首推；**上线后建议 Revoke 该 token** |
 | 无自定义域名 | 当前用项目页路径；若要 `ai-please.allen-diginet.com`，需在 DNSPod 加一条 CNAME → `lusuallen.github.io`，并在 workflow 的 `configure-pages` 补 `cname` |
+
+---
+
+## 12. 实现记录：第五轮（存档公平性 / 三步教学 / 无障碍）
+
+> 用户授权（2026-10-24）：「按照优先级逐步推进，不需要找我确认，除非遇到阻塞项关键问题」。本轮按 CPO / CTO / 验收测试工程师 三方结论落地，不再逐项确认。
+
+### 12.1 改了什么
+
+| # | 问题（证据） | 改法 | 文件 |
+| --- | --- | --- | --- |
+| 1 | 刷新回到首页后，`hasSave` 用 `run.index > 0` 判断 → **第 1 位开档后刷新，RESUME 入口消失**，而存档其实在 | 判定改为 `run.index >= 0 && run.index < 10`，首页按真实存档状态出 `RESUME · 第 01 / 10 位` | `src/App.tsx` |
+| 2 | 存档写失败时玩家毫不知情，刷新就丢进度 | `storage.ts` 增加 `StorageFailure` + 订阅；`useGame` 用 `useSyncExternalStore` 暴露 `storageFailure`；`App` 顶部渲染 `role="status"` 提示「本局尚未保存」 | `src/game/storage.ts`、`src/hooks/useGame.ts`、`src/App.tsx`、`src/styles/global.css` |
+| 3 | `clearStorageFailure()` 无差别清除 → **删除失败被随后一次成功的写入"洗白"**，提示消失（验收场景 7 复现） | 清除按操作作用域：`clearStorageFailure('write' \| 'delete')` 只清同名操作 | `src/game/storage.ts` |
+| 4 | 广播确认状态、INSPECT 状态、结尾选择在刷新后丢失，可重复收费/重复判定 | 存档扩展 `phase / inspected / seenUpdates / pendingUpdate / lastRecord`；旧 v2 存档缺字段按兼容推断；`index === 10` 或 `records.length === 10` 恢复为 `verdict` | `src/game/storage.ts`、`src/hooks/useGame.ts` |
+| 5 | 6 步文字墙 + 无跳过 + 无回看 | 压到 3 步，加 `上一步 / 跳过说明`，收尾文案按上下文（`context: 'home' \| 'game'`）分别为「返回首页 ▸ / 开始审核 ▸」 | `src/components/TutorialSheet.tsx`、`src/screens/HomeScreen.tsx`、`src/screens/GameScreen.tsx` |
+| 6 | 弹层无 `role="dialog"`、无焦点陷阱、Tab 可跑出弹层、Escape 行为不一致 | 新增 `useModalA11y`（按 **computed z-index + DOM 顺序**选最上层，70/80/68 三档命中）；护照、规则抽屉、反馈、立场选择、教程统一接入；Escape 只对可关闭层生效，关闭后焦点回到开启者 | `src/hooks/useModalA11y.ts` + 5 个弹层组件 |
+| 7 | 护照「章位」原是不可聚焦的展示块，键盘用户无法查看护照；语义上像"点一下就等于放行" | 章位合并为一个语义化 `<button aria-label="查看护照详情">`，只负责打开护照；放行/拒签仍必须走 `STAMP · APPROVE / DENY` | `src/components/PassportDoc.tsx` |
+| 8 | 护照内小控件 < 44px | 补 `min-height: 44px` + 像素风 `:focus-visible` 描边 | `src/styles/global.css` |
+
+### 12.2 验收证据（全部为本轮实跑输出）
+
+**A. 独立验收脚本 `scripts/verify-next-version.mjs`（Node 22 + 无依赖 CDP，隔离 profile，真实鼠标/键盘事件）**
+
+```text
+node scripts/verify-next-version.mjs --url http://127.0.0.1:4175/ai-please/ --out /tmp/ai-please-qa-final2
+PASS broadcast-3-6-8-real-journey-refresh-ack
+PASS inspect-first-visitor-refresh-no-double-charge
+PASS last-visitor-refresh-ending-STRICT
+PASS last-visitor-refresh-ending-HUMAN
+PASS storage-getItem-failure-visible-no-white-screen
+PASS storage-setItem-failure-visible-no-white-screen
+PASS storage-removeItem-failure-visible-no-white-screen
+PASS stamp-slots-enter-space-dialog-focus
+PASS feedback-modal-focus
+PASS tutorial-modal-focus
+PASS: 10/10 scenarios; evidence: /tmp/ai-please-qa-final2
+```
+
+`test-results.json`：`status=PASS`、`exitCode=0`、**104/104 断言通过**、`runtimeErrors = 0`、24 张 PNG。
+
+覆盖点：第 3/6/8 位广播在**未 ACK 刷新后仍在**且三键锁定、ACK 后不重复弹出且只记一次；第 1 位开档只扣一次 ¥25 且刷新后不重复收费/计数；末位访客刷新不得重放 V-010（STRICT 与 HUMAN 两条结局都测）；getItem/setItem/removeItem 三种注入故障下不白屏且有可见提示；章位 Enter/Space 打开护照且**不产生判定**；护照/抽屉/反馈/教程四类弹层的 `role=dialog` + 焦点陷阱 + Escape + 焦点归还。
+
+**B. 全流程真实playthrough（390×844 / DSF2 / iPhone UA，`/tmp/e2e-final.mjs`）**
+
+```text
+PASS: 25/25 checks
+```
+
+| 断言 | 结果 |
+| --- | --- |
+| 教程 01/03 → 02/03 → 回看 01/03 → 03/03「返回首页」 | ✅ |
+| 开局 `VISITOR 01/10 · FUNDS ¥1000 · SCORE 0` | ✅ |
+| V-001…V-010 十次判定全 CORRECT（5 次走护照盖章、5 次走底栏按钮） | ✅ 10/10 |
+| 结算 `S · 边境之星 / 10/10 / ¥2125 / HUMAN · THE DOOR`，审核流水 ≥10 行 | ✅ |
+| `PLAY AGAIN` 回到 `01/10 · ¥1000 · SCORE 0` | ✅ |
+| 刷新首页出现 `RESUME · 第 02 / 10 位` 并正确续到 02/10 | ✅ |
+| 390 视口横向溢出 / <32px 触摸目标 / console 错误 | `0 / [] / []` |
+
+**C. 构建门禁**
+
+```text
+npm run build   # tsc --noEmit && vite build && node scripts/postbuild.mjs
+✓ 52 modules transformed.
+dist/index.html 0.57 kB · css 22.95 kB (gzip 5.41) · js 186.09 kB (gzip 61.38)
+[postbuild] dist/404.html + dist/.nojekyll 就位
+```
+
+### 12.3 本轮踩过的坑（留给下一次）
+
+1. **`vite preview` 不能当作 Pages 验证环境**：`/ai-please/assets/*.js` 被回退成 `index.html` 且 `Content-Type: text/html` → 浏览器不执行 JS，10 个场景统一超时。正确做法是用静态映射服务把 `/ai-please/` 映射到 `dist`（本轮用 `:4175`），再跑验收。
+2. **验收脚本自身的 `wait()` 返回 DOM 节点**时，CDP `returnByValue` 会报 `Object reference chain is too long`。`wait()` 必须 `!!(expr)` 归一成布尔。
+3. **CDP 的 Enter/Space 不带 `text` 不会触发按钮默认行为**，必须带 `text: '\r' / ' '` + `unmodifiedText`，否则会误判"键盘不可用"。
+4. **注入式 `localStorage.clear()` 在每次新文档都会执行**，会把刷新恢复场景假阳性化；必须用 `sessionStorage` 标记只播种一次。
+5. 三条断言失败里，只有「removeItem 失败提示消失」是真业务缺陷（见 12.1 #3），另外两条是脚本缺陷——**失败先 dump 证据再改代码**。
+
+### 12.4 线上地址
+
+`https://lusuallen.github.io/ai-please/`（部署链路见 §11；本轮提交后由 `deploy.yml` 自动重建发布）。

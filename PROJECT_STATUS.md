@@ -588,7 +588,19 @@ PASS: 10/10 scenarios; 241 assertions; runtimeErrors=0  → /tmp/v3-evidence3
 4. **禁词扫描要扫到模板文案**：`tenureClue` 原来写"历史申请 N 次驳回"，"驳回"在判定前就泄露了结论倾向，改成"需补充材料"。
 5. 预算一旦贴线，**每次改文案都要重新量**：`verify:budget` 已进 CI，构建后必跑。
 
-### 13.6 仍未签字 / 未做的
+### 13.6 线上验收（在真实地址上跑，不是本地）
+
+提交 `e186807` 推送到 `main` → `deploy.yml`（含新的 `npm test` / `verify:budget` 门禁）重建 → 线上 HTML 已换成新产物 `assets/index-C53IDwrW.js`（轮询 2 次命中，约 40s）。
+
+同一套脚本在 **`https://lusuallen.github.io/ai-please/`** 上重跑：
+
+```text
+PASS: 10/10 scenarios; 241 assertions; runtimeErrors=0   → /tmp/live-v3
+```
+
+线上证据图：`docs/shots/17-live-round6-inspect.png`（线上开档解封线索）、`docs/shots/18-live-round6-d03-320.png`（线上 D03 在 320×568 的排版）。
+
+### 13.7 仍未签字 / 未做的
 
 - ★1 首屏动词（`START GAME` vs 更具体的动词）—— 未签，保持现状。
 - ★4 结算顺序（先看结局还是先看逐条复盘）—— 未签，保持"复盘 → 结局"。

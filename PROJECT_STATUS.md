@@ -356,7 +356,9 @@ node /tmp/cdp-e2e.mjs        # 14 passed / 0 failed
 | SPA 刷新回退 | `scripts/postbuild.mjs` 把 `dist/index.html` 复制成 `dist/404.html` |
 | Jekyll 拦截 | `scripts/postbuild.mjs` 写 `dist/.nojekyll` |
 | 源码映射 | `build.sourcemap: false`（线上不带 `.map`） |
-| 自动发版 | `.github/workflows/deploy.yml`：push `main` → `npm ci` → `npm run build` → `upload-pages-artifact` → `deploy-pages` |
+| 自动发版 | `.github/workflows/deploy.yml`：push `main` → `npm ci` → `npm test` → `npm run build` → `npm run verify:budget` → `upload-pages-artifact` → `deploy-pages` |
+| 门禁口径 | 单测 50（生成器/评分器/存档/不变量/展示预算）、生成快照 72 组哈希、预算四行：首屏 JS 70kB / 首屏 CSS 6.2kB（第九轮新增）/ 全部 JS 74kB / 总产物 260kB |
+| 验收口径 | 本地与线上都跑 `scripts/verify-v3.mjs`（18 场景 / 325 断言，断言只增不减，`runtimeErrors=0`） |
 | Pages 开通 | `actions/configure-pages@v5` + `enablement: true`（首次用工作流 token 自动开通，无需网页点击） |
 | 首次发布 | Actions run **#1 success**，`https://api.github.com/repos/LuSuAllen/ai-please/pages` 创建返回 201，`build_type=workflow` |
 
@@ -712,3 +714,64 @@ PASS: 10/10 scenarios; 241 assertions; runtimeErrors=0   → /tmp/live-round8
 ```
 
 线上首屏按钮文案实测：`开始游戏 | START GAME`，`overflowX = 0`。
+
+---
+
+## 15. 第九轮：阶段5展示优化（2026-10-24）
+
+> 输入：`docs/HANDOFF-NEXT-ROUND.md`（第九轮交接提示词 §4.1/§4.2/§4.4）。判定层与生成层未动，快照哈希 `6ea6656d4ab9ad0e` 不变；机制扩展 B/A/C 按规格本轮不启动。
+
+### 15.1 改了什么
+
+| 编号 | 需求 | 落地 |
+| --- | --- | --- |
+| S5-H1 | 首屏写死「七条规则」 | `src/screens/HomeScreen.tsx` 改用 `rulesForEvents(getBlueprint(day).events).length`；实测 D01=6 条、D03=7 条，`12 位访客，7 条规则` 与 `8 位访客，6 条规则` 都随关卡切换 |
+| S5-H2 | 三 CTA 主次不分 | 主按钮「开始游戏」= `btn btn-wide btn-approve`，`RESUME` = `btn`，`VIEW HOW TO PLAY` = `btn-ghost`；英文小字 `START GAME / START NEW SHIFT` 保留为验收锚点 |
+| S5-P1 | 进度条对读屏不可见 | `.stat-progress` 加 `role="progressbar"` + `aria-valuemin/max/now` + `aria-valuetext`（`已判 N 位 · 共 M 位`）；`.pip-track` 保持 `aria-hidden` |
+| S5-P2 | 盖章等待固定 900ms | `handleStamp` 改为 `prefers-reduced-motion: reduce → 0ms`、默认 340ms，`STAMP_MS` 只作兜底；线上实测 92ms / 376ms |
+| S5-R1 | 结算页藏姓名节点 | 删掉 `<span style={{display:'none'}}>{v?.name}</span>` 及无用 `visitors.find` |
+| S5-A1 | viewport 禁止缩放 | 根 `index.html` 改为 `width=device-width, initial-scale=1.0, viewport-fit=cover`（规格写 `src/index.html` 属文档漂移，实际文件在仓库根） |
+| S5-A5 | 缺 CSS 预算 | `scripts/check-budget.mjs` 新增 `INITIAL_CSS_GZIP_BUDGET = 6200`，输出四行预算：首屏 JS / 全部 JS / `[首屏CSS]` / 总产物 |
+| S5-H3 | day chip 内联样式 + 锁定无语义 | 抽到 `.day-pick` / `.day-chip` / `.day-chip-locked`，`aria-label` 含「未解锁」，`aria-pressed` 保留 |
+| S5-H4 | 矮屏首屏被裁 | `.home { justify-content: safe center }`，320×568 `.home-kicker` 顶端不再被裁 |
+| S5-P3 | 信号卡只靠颜色 | 每张 `.signal` 增加 `.sig-level` 文本（`ALERT/WARN/INFO`），与 `SignalLevel` 枚举一一对应 |
+| S5-P5 | 计分表每位都弹 | `FeedbackOverlay` 新增 `index` 入参，`index < 2` 才渲染 SCORING TABLE |
+| S5-P6 | `.stamp-sub` 9px 低对比 | 改为 11px + `var(--ink-dim)`（实测 `rgb(134,152,179)`） |
+| S5-P7 | toast 按钮过小 | `.toast .t-action` 置 `min-height: 40px`（实测 40px） |
+| S5-P8 | 320px 直接隐藏 tier | `max-width:48%` + 省略号截断，不再 `display:none`（320 下实测 `FLAGGED` 可见） |
+| S5-R2 | 误判流水行无标记 | `.log-row.bad` 3px 左边框 + 内缩；`#ff5470` on `#0a1120` ≈ 6.1:1 |
+| S5-R3 | MISJUDGED 单格混排 | 拆成「误放行 · WRONG APPROVE」与「误拒绝 · WRONG DENY」两格 |
+| S5-A2 | 判定结果无播报 | 新增 `.sr-only` 类 + `role="status" aria-live="polite"` 播报「第 N 位：判定 X，正确/错误」 |
+| S5-A3 | 动画无预算 | 新增 `tests/display-budget.test.ts`：动画名/时长白名单（fade-in 120 / slide-up 160 / slide-down 180 / stamp-in 320·380 / pip-pulse 1.1s / blink 1.2s）、无限循环 ≤2、非白名单 ≤400ms、transition ≤60ms |
+
+**未做（已披露）**：S5-A4 设计 token 收敛（12→6 等）风险最高、与本轮展示改动无耦合，规格允许延后，下一轮单独做；仍待用户签字的 ★3、★5、S5-R4、S5-P4 与机制扩展 B/A/C 取舍不在本轮范围。
+
+e2e 新增 8 个场景（原 10 场景 241 断言 → 18 场景 325 断言，只增不减）：`home-copy-matches-rule-count`、`progressbar-exposes-position`、`stamp-wait-bounded`、`scoring-table-first-two-only`、`touch-target-min-40`、`zoom-enabled`、`display-change-no-answer-leak`、`round9-visual-and-live-region-contracts`（覆盖 signal 等级文字 / 320 下 `.pp-tier` / `.stamp-sub` 计算样式 / aria-live 播报）。
+
+顺带修掉两个验收脚本自身的坑，都是"假失败"而不是产品 bug：① 无头窗口键盘事件需要 `Emulation.setFocusEmulationEnabled`，否则 Escape/Tab 会被随机丢弃；② `click()` 补 `mouseMoved` 并等新访客渲染稳定再取样，否则布局位移会让点击落空（首轮 `stamp-wait-bounded` 就是这么红的）。
+
+### 15.2 线上验收（真实地址）
+
+**地址：https://lusuallen.github.io/ai-please/**
+
+| 项 | 实测 |
+| --- | --- |
+| 提交 | `4d1dba2`（代码）+ `e62d3e1`（门禁脚本）+ `c96553f`（展示预算测试） |
+| 发版 | push `main` → Actions 重建；轮询线上 `index.html` **第 4 次**命中新产物 `assets/index-CieLlWy_.js`（前 3 次仍是 `index-CmbJwozc.js`） |
+| 线上 e2e | `18/18 场景 · 325 断言 · runtimeErrors=0`（`/tmp/live-r9`） |
+| 线上首屏文案 | `12 位访客，7 条规则`（D03）/ `8 位访客，6 条规则`（D01）实测通过 |
+| 线上进度条 | `role=progressbar`、`aria-valuemax=8`、`aria-valuetext="已判 1 位 · 共 8 位"` |
+| 线上盖章等待 | reduced-motion 92ms、默认 376ms |
+| 线上触控目标 | `.day-pick button` 41px、`.pp-open` 44px、`.pp-portrait` 74px、`.toast .t-action` 40px |
+| 本地门禁 | 生成快照 72 组 `6ea6656d4ab9ad0e`；单测 50；预算首屏 JS 32.13kB/70、首屏 CSS 5.54kB/6.2、全部 JS 35.01kB/74、总产物 119.58kB/260；`stress` 10000 局 0 失败 |
+
+证据图：`docs/shots/24-round9-home-rule-count-1280.png`、`25-round9-progressbar-1280.png`、`26-round9-touch-targets-1280.png`、`27-round9-contracts-320.png`（本地构建）、`28-live-round9-home-rule-count-1280.png`、`29-live-round9-contracts-320.png`（线上真地址）。
+
+### 15.3 签字状态
+
+| 项 | 状态 |
+| --- | --- |
+| 本轮 P0×7 | 7/7 落地并通过本地 + 线上验收 |
+| 本轮 P1 | 除 S5-A4（设计 token 收敛，按规格延后并在此披露）外全部落地；S5-P4 属用户签字项，未做 |
+| 仍待用户签字 | ★3、★5、S5-R4、S5-P4；机制扩展 B/A/C 的取舍（本轮不启动） |
+| 验收口径 | 只增不减：旧 10 场景 241 断言全部保留并通过，新增 8 场景 84 断言 |

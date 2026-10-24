@@ -605,3 +605,42 @@ PASS: 10/10 scenarios; 241 assertions; runtimeErrors=0   → /tmp/live-v3
 - ★1 首屏动词（`START GAME` vs 更具体的动词）—— 未签，保持现状。
 - ★4 结算顺序（先看结局还是先看逐条复盘）—— 未签，保持"复盘 → 结局"。
 - 阶段 5「现场展示优化」：未开始。
+
+---
+
+## 14. 第七轮：减法（框架层换引擎 + 死代码清理）
+
+### 14.1 需求
+
+用户（m01668）：「请继续，同时做减法。不影响游戏核心玩法」。硬约束：生成结果、判定逻辑、界面表现、存档兼容一个都不能动。
+
+### 14.2 做了什么
+
+| 项 | 做法 | 收益 |
+| --- | --- | --- |
+| 框架运行时 | `vite.config.ts` 加 `resolve.alias`，把 `react` / `react-dom` / `react-dom/client` / `react/jsx-runtime` 指向 `preact/compat` | 首屏 JS 69.76 → **31.90kB gzip**（−37.86kB，−54%） |
+| 死样式 | 删 `.visitor-meta` / `.visitor-service` / `.info-list` / `.rule-chip-row` / `.info-val .hl` | CSS 22.9 → 22.7kB |
+| 校验器消息 | `validateRun` 的失败消息从自然语言压成 `码:原因:标识`（`I3:verdict:V-003`），禁词扫描改用预编译正则 | 逻辑更紧凑，报错仍可定位 |
+| 重复文案 | `ModeChoice` 三处「不改分数只改结局」合并成一处 | 少两行重复 |
+
+### 14.3 等价性证据（这是"减法"能否成立的全部依据）
+
+```text
+生成快照  72 组局（D01/D02/D03 × 24 seed），哈希 6ea6656d4ab9ad0e 与改造前完全一致
+单测      47 / 47 pass（node --test，含 10000 局不变量与 oracle 复算）
+压测      3000 局 0 失败，p50 0.16ms / p95 0.33ms / p99 0.63ms
+端到端    10 / 10 场景，241 断言，runtimeErrors=0
+像素      home / playing / feedback 结算前 / last-visitor / verdict / result 六态
+          与 React 产物逐像素一致：0 / 1152000 像素差异（max delta 0）
+预算      首屏 31.86kB / 70kB（45.5%）；全部 JS 34.74kB / 74kB；总产物 118.06kB / 260kB
+```
+
+### 14.4 换引擎时暴露的一个真 bug（不是框架的锅）
+
+首版换 Preact 后验收挂了两条：`存档记录绑定当前访客` 读到上一位的 `V-005`、末位通关后不弹模式选择。根因是**进度落盘挂在 passive effect 上**：React 18 恰好在下次交互前刷完，Preact 走的是帧后调度，"判定 → 立刻刷新"就会读到上一帧的状态。改成 `useLayoutEffect`（本次提交内一定落盘），两个框架下都按同一语义执行——这属于把隐式时序依赖去掉，行为反而更确定。
+
+### 14.5 取舍
+
+- `react` / `react-dom` 仍留在 `dependencies`：只作为 `@types` 的解析来源和 dev 兜底，不进产物；删掉会让类型解析变脆，收益为零。
+- 回退成本 = 删掉 `vite.config.ts` 里的 `preactAlias` 一段，其余代码零改动。
+- 未做：路由级代码分割（只有 1 个路由，分割只会增加请求数）。

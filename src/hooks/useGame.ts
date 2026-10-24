@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useReducer, useSyncExternalStore } from 'react';
+import { useCallback, useLayoutEffect, useReducer, useSyncExternalStore } from 'react';
 import { FUNDS_TABLE, START_FUNDS, resolveReview } from '../game/engine.ts';
 import { generateRun } from '../game/generator.ts';
 import { DAY_IDS, getBlueprint } from '../data/levels.ts';
@@ -202,8 +202,10 @@ export function useGame() {
   const visitor = state.run ? state.run.visitors[state.index] : undefined;
   const total = state.run?.total ?? 0;
 
-  // 进度落盘：刷新后可以接着审，不出现死局
-  useEffect(() => {
+  // 进度落盘：刷新后可以接着审，不出现死局。
+  // 用 layout effect 而不是 passive effect —— 落盘必须在本次提交内完成，
+  // 否则"判定 → 立刻刷新"会读到上一位的状态（框架调度差异下会真实复现）。
+  useLayoutEffect(() => {
     if (!state.run) return;
     if (state.phase === 'playing' || state.phase === 'feedback' || state.phase === 'verdict') {
       saveRun({
@@ -229,7 +231,7 @@ export function useGame() {
     state.inspected, state.seenUpdates, state.pendingUpdate, state.lastRecord, state.run]);
 
   // 结算时写最高分、按日成绩并解锁下一天
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (state.phase === 'result' && state.run) {
       clearRun();
       const meta = loadMeta();

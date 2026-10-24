@@ -6,7 +6,7 @@
 - **每局按种子重新洗牌**：14 个访客模板 + 6 张手工卡（特殊豁免 / 规则冲突），配额、字段、线索、姓名全由 `seed` 派生；同种子必得同一局。
 - 7 条规则 / 数次名单与命令变更 / 双结局（STRICT MODE · HUMAN MODE）。
 - 线上：**https://lusuallen.github.io/ai-please/**（GitHub Pages，push `main` 自动发布）
-- 技术栈：React 18 + TypeScript + Vite 5 + 纯 CSS（无后端、无 API、无登录，localStorage 存档）
+- 技术栈：TypeScript + Vite 5 + 纯 CSS（无后端、无 API、无登录，localStorage 存档）；源码写 React 18 API，**构建时把 `react` / `react-dom` 别名到 `preact/compat`**，框架体积从 ~45kB gzip 降到 ~11kB（见下）
 - 玩法与逐条验收证据：见 [PROJECT_STATUS.md](PROJECT_STATUS.md)
 
 ## 本地开发
@@ -17,6 +17,23 @@ npm run dev            # http://127.0.0.1:5173/
 npm run build          # 产物在 dist/（含 404.html 与 .nojekyll）
 npm run preview        # http://127.0.0.1:4173/ai-please/ —— 只适合看样式
 ```
+
+## 框架层减法（为什么源码写 React、产物是 Preact）
+
+首屏 JS 一度顶到 69.88kB / 70kB 预算线，其中 ~45kB gzip 全在 React 运行时。源码继续用 React API（`useReducer` / `useSyncExternalStore` / `createRoot`），只把打包目标换成 `preact/compat`：
+
+```ts
+// vite.config.ts —— 想回退 React，删掉这段 resolve.alias 即可
+const preactAlias = [
+  { find: /^react$/, replacement: 'preact/compat' },
+  { find: /^react-dom$/, replacement: 'preact/compat' },
+  { find: /^react-dom\/client$/, replacement: 'preact/compat/client' },
+  { find: /^react\/jsx-runtime$/, replacement: 'preact/jsx-runtime' },
+  { find: /^react\/jsx-dev-runtime$/, replacement: 'preact/jsx-dev-runtime' },
+];
+```
+
+等价性不是"应该没问题"，是量过的：**72 组生成快照哈希不变** `6ea6656d4ab9ad0e`、**47 单测全过**、**10 场景 / 241 断言全过**、**6 个关键界面与 React 产物逐像素一致（0 像素差异）**。`react` / `react-dom` 仍留在 `dependencies` 里只作类型来源，不参与打包。
 
 ## 门禁与验收
 

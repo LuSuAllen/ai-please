@@ -254,6 +254,7 @@ try {
   const day1 = fixtureRun('D01');
   const day2 = fixtureRun('D02');
   const day3 = fixtureRun('D03');
+  const day4 = fixtureRun('D04');
 
   await scenario('seeded-day1-full-run-judged-by-oracle', async () => {
     await page({ query: `?day=D01&seed=${day1.seed}` });
@@ -358,8 +359,9 @@ try {
     await page({ meta: { unlockedDay: 'D01', bestByDay: { D01: 300 } } });
     await wait(`document.querySelector('.day-pick')`, 'home picker');
     const labels = await current.eval(`Array.from(document.querySelectorAll('.day-pick button')).map(b=>({text:b.innerText, disabled:b.disabled}))`);
-    assert(labels.length === 3, '首页展示三天', labels.length);
-    assert(labels[1].disabled === true && labels[2].disabled === true, '未解锁的两天不可点', labels);
+    // 第十轮：D04 上线后关卡数由 3 → 4，断言同步改为「展现四天」并补锁定位检查（只增不减）
+    assert(labels.length === 4, '首页展示四天（D01–D04）', labels.length);
+    assert(labels[1].disabled === true && labels[2].disabled === true && labels[3].disabled === true, '未解锁的三天不可点', labels);
     assert(/BEST\s*300/.test(labels[0].text), '已通关日展示最好成绩', labels[0].text);
     assert((await bodyText()).includes('8'), '首页给出当日人数');
   });
@@ -569,6 +571,39 @@ try {
     const live = await current.eval(`(() => { const e=document.querySelector('.sr-only[aria-live="polite"]'); return e ? { role: e.getAttribute('role'), text: e.innerText } : null; })()`);
     assert(live?.role === 'status' && /判定/.test(live.text), '判定结果通过 aria-live=polite 播报', live);
     await shot('round9-contracts-320');
+  });
+
+  await scenario('day4-ladder-extends', async () => {
+    await page({ meta: { unlockedDay: 'D04' } });
+    await wait(`document.querySelector('.home-buttons')`, 'home for D04');
+    const chips = await current.eval(`Array.from(document.querySelectorAll('.day-pick button')).map((b) => b.getAttribute('aria-label') || b.innerText)`);
+    assert(chips.length === 4, '首页出现 4 个关卡按钮（D01–D04）', chips);
+    assert(chips.every((c) => /D0[1-4]/.test(String(c))), '四个关卡分别是 D01–D04', chips);
+    await clickText('D01');
+    await wait(`document.body.innerText.includes('8 位访客')`, 'home switched to D01');
+    await sleep(120);
+    const d01Home = await bodyText();
+    assert(/8 位访客/.test(d01Home) && /6 条规则/.test(d01Home), '切回 D01 仍是 8 位 / 6 条', d01Home.slice(0, 90));
+    await clickText('D04');
+    await wait(`document.body.innerText.includes('16 位访客')`, 'home switched to D04');
+    await sleep(120);
+    const home = await bodyText();
+    assert(/16 位访客/.test(home), 'D04 首屏为 16 位访客', home.slice(0, 90));
+    assert(/7 条规则/.test(home), 'D04 首屏 7 条规则（R06 / R07 两次上线）', home.slice(0, 90));
+    await shot('day4-home');
+
+    await page({ query: `?day=D04&seed=${SEED}` });
+    await wait(`document.querySelector('.actionbar')`, 'D04 launch');
+    const bar = await current.eval(`(() => { const e=document.querySelector('.stat-progress'); return e && { max:e.getAttribute('aria-valuemax'), text:e.getAttribute('aria-valuetext'), pips:document.querySelectorAll('.pip-track .pip').length }; })()`);
+    assert(bar?.max === '16', 'D04 进度条 max=16', bar);
+    assert(bar.pips === 16, 'D04 进度条渲染 16 个 pip', bar.pips);
+    assert(/共\s*16\s*位/.test(bar.text || ''), 'D04 aria-valuetext 含「共 16 位」', bar.text);
+    const visible = await bodyText();
+    assert(/RULES OF THE DAY/.test(visible), 'D04 局内渲染当日规则区', visible.slice(0, 90));
+    await judge(day4.visitors[0].correct);
+    const after = await current.eval(`document.querySelector('.stat-progress')?.getAttribute('aria-valuenow')`);
+    assert(after === '1', 'D04 判定第一位后进度同步', after);
+    await shot('day4-in-run');
   });
 
   assert(report.runtimeErrors.length === 0, 'no uncaught browser runtime exceptions', report.runtimeErrors);

@@ -357,8 +357,8 @@ node /tmp/cdp-e2e.mjs        # 14 passed / 0 failed
 | Jekyll 拦截 | `scripts/postbuild.mjs` 写 `dist/.nojekyll` |
 | 源码映射 | `build.sourcemap: false`（线上不带 `.map`） |
 | 自动发版 | `.github/workflows/deploy.yml`：push `main` → `npm ci` → `npm test` → `npm run build` → `npm run verify:budget` → `upload-pages-artifact` → `deploy-pages` |
-| 门禁口径 | 单测 50（生成器/评分器/存档/不变量/展示预算）、生成快照 72 组哈希、预算四行：首屏 JS 70kB / 首屏 CSS 6.2kB（第九轮新增）/ 全部 JS 74kB / 总产物 260kB |
-| 验收口径 | 本地与线上都跑 `scripts/verify-v3.mjs`（18 场景 / 325 断言，断言只增不减，`runtimeErrors=0`） |
+| 门禁口径 | 单测 56（生成器/评分器/存档/不变量/展示预算/关卡配方）、生成快照双轨：冻结区 D01–D03 **72 组恒等** `6ea6656d4ab9ad0e` + 配方区单独汇总（第十轮起，加关不再污染旧哈希）、预算四行：首屏 JS 70kB / 首屏 CSS 6.2kB / 全部 JS 74kB / 总产物 260kB |
+| 验收口径 | 本地与线上都跑 `scripts/verify-v3.mjs`（19 场景 / 339 断言，断言只增不减，`runtimeErrors=0`） |
 | Pages 开通 | `actions/configure-pages@v5` + `enablement: true`（首次用工作流 token 自动开通，无需网页点击） |
 | 首次发布 | Actions run **#1 success**，`https://api.github.com/repos/LuSuAllen/ai-please/pages` 创建返回 201，`build_type=workflow` |
 
@@ -775,3 +775,56 @@ e2e 新增 8 个场景（原 10 场景 241 断言 → 18 场景 325 断言，只
 | 本轮 P1 | 除 S5-A4（设计 token 收敛，按规格延后并在此披露）外全部落地；S5-P4 属用户签字项，未做 |
 | 仍待用户签字 | ★3、★5、S5-R4、S5-P4；机制扩展 B/A/C 的取舍（本轮不启动） |
 | 验收口径 | 只增不减：旧 10 场景 241 断言全部保留并通过，新增 8 场景 84 断言 |
+
+---
+
+## 16. 第十轮：D04 上线（关卡配方化第一步，2026-10-24）
+
+拍板依据：CPO / CTO / 验收三线会诊后用户在 m00465 一次性批准六个拍板点（保留 D01–D03 为固定教学关、只给新关做规则参数化、先补 D04、判定与评分机制不变、主线 8 关封顶 + 加班模式、单局时长上限）。本轮只落**第 3 点（补 D04）**，其余按顺序后续轮次推进。
+
+### 16.1 改了什么
+
+| 面 | 内容 |
+| --- | --- |
+| 新增 `src/data/specs.ts` | `LevelSpec` → `composeBlueprint` → 现有 `DayBlueprint`；`lintBlueprint` 做 I15–I17 配方侧校验（配额和 = 人数、人数 6–24、槽位范围/重复/卡 id、事件 kind/范围/严格递增/特赦窗口/名单变更形状）。加关从此是「加一条 spec + 过 linter」，不再手改六处 |
+| `src/data/levels.ts` | `LEGACY_DAY_IDS = ['D01','D02','D03']` 冻结；配方循环并入 `BLUEPRINTS`（重名抛错）；`DAY_IDS = [...LEGACY_DAY_IDS, ...LEVEL_SPECS.map(id)]` |
+| D04 配方 | 16 位访客、配额 N4/D3/A6/I1/S1/C1（放行率必在 0.45–0.68）、事件 R06@3 → 名单变更@6（开 SG-03 / 关 TZ-07）→ 特赦 8–10 → R07@11、S 池 4 候选 + C 池 4 候选、`allowCleanConfirm: true` |
+| `src/styles/global.css` | `.day-pick` 由固定 3 列改 `repeat(auto-fit, minmax(64px, 1fr))`：4 关自适应，320 宽仍 ≥40px 触控目标 |
+| `scripts/snapshot-runs.mts` | 快照按天拆分：`legacy-combined`（D01–D03，72 组，**必须恒等** `6ea6656d4ab9ad0e`）+ `composed-combined`（D04 起）+ `combined`（仅变更提示，不作判据）。加新关不再产生「假红」 |
+| `scripts/verify-v3.mjs` | 新增场景 `day4-ladder-extends`：首页 4 个关卡按钮且分别是 D01–D04、切 D01 仍 8 位/6 条、切 D04 首屏 16 位/7 条、`aria-valuemax=16`、16 个 pip、`aria-valuetext` 含「共 16 位」、局内 RULES OF THE DAY、判定第一位后 `aria-valuenow=1`。既有场景「首页展示三天」同步为「四天」并补「未解锁的三天不可点」——关卡数由 3 → 4 是产品事实变化，断言只增不减 |
+| 新增 `tests/levels.test.ts` | 6 个测试：配方 linter 全过且进 `DAY_IDS`；`DAY_IDS` 顺序 = 冻结区在前；D01–D03 人数/规则数仍 8/10/12 与 6/6/7；每条配方 24 种子零失败零校验错误；新关判定唯一 + 需开档者有 warn/alert + 放行率 0.45–0.68；D04 名单变更早于特赦窗口 |
+
+本地门禁（提交前）：
+
+| 门禁 | 结果 |
+| --- | --- |
+| `npm test` | **56 通过 / 0 失败**（原 50 + 关卡配方 6） |
+| `npm run build` | `assets/index-CNjGfvce.js` 85.73kB raw / 32.45kB gzip；`assets/index-fXceeYVY.css` 23.62kB / 5.58kB gzip |
+| `npm run verify:budget` | 首屏 JS 32.41/70、全部 JS 35.29/74、首屏 CSS 5.56/6.2、总产物 120.63/260（四行全过） |
+| 快照 | `snapshots=96`；`legacy-combined=6ea6656d4ab9ad0e`（冻结区一字未动）；`composed-combined=67ddbed53bb99ede` |
+| 本地 e2e | `PASS: 19/19 scenarios; 339 assertions`（`/tmp/e2e-r10-final2`，断言只增不减，`runtimeErrors=0`） |
+| `npm run stress` | `runs=10000 failures=0`，`perDay=D01:2500 D02:2500 D03:2500 D04:2500`（D04 自动进入不变量矩阵） |
+
+### 16.2 线上验收
+
+| 项 | 结果 |
+| --- | --- |
+| 提交 | `c94e95f`（代码）+ `6f742ec`（门禁脚本）+ `2e2c078`（关卡配方测试） |
+| 发版 | push `main` → Actions `2e2c078` **completed success**；轮询线上 `index.html` **第 4 次**命中新产物 `assets/index-CNjGfvce.js`（前 3 次仍是 `index-CieLlWy_.js`）。push 首次因 `Error in the HTTP2 framing layer` 失败，用 `-c http.version=HTTP/1.1` 重推成功（非代码问题） |
+| 线上 e2e | `19/19 场景 · 339 断言 · runtimeErrors=[]`（`/tmp/live-r10`，Chrome/155.0.8059.85） |
+| 线上 D04 首屏 | 「16 位访客，7 条规则」，四个关卡按钮 `D01 8 位访客 / D02 10 位访客 / D03 12 位访客 / D04 16 位访客` |
+| 线上 D04 局内 | `aria-valuemax=16`、`aria-valuetext="已判 0 位 · 共 16 位"`、16 个 `.pip-track .pip`、判定第一位后 `aria-valuenow=1` |
+| 线上旧关回归 | D01 仍 8 位/6 条、D03 仍 12 位/7 条；第九轮 8 个可达性场景全部继续通过 |
+
+证据图：`docs/shots/30-live-round10-home-four-days-1280.png`（首页四关）、`31-live-round10-day4-home-1280.png`（D04 首屏 16 位/7 条）、`32-live-round10-day4-in-run-1280.png`（D04 局内 16 个 pip，线上真地址）。
+
+### 16.3 签字状态
+
+| 项 | 状态 |
+| --- | --- |
+| 本轮范围（拍板点 3：补 D04） | 已落地并通过本地 + 线上验收 |
+| 冻结区 D01–D03 | 蓝图、判定、生成器一行未改；72 组快照哈希恒等 `6ea6656d4ab9ad0e` |
+| 判定/评分/开档机制（拍板点 4） | 未改动：`rules-eval` / `engine` / `zones` / `rng` / `validate` / `generator` 全部原样 |
+| 按拍板顺序仍待做 | ① 规则参数化（只挂新关）② 开档额度接入（`inspectQuota` 目前零调用点）③ R08/R09 与 D05–D08 配方 ④ 加班模式与跨关资产（职级/人事档案）⑤ 反背题三支柱（开档额度、每日规则参数化、双证据冲突） |
+| 已知缺口（本轮主动披露） | `validate.ts` 的 I8 只看**第一个** `zoneChange`，D04 因此只用单次名单变更；后续若上双 zoneChange 必须先补 I8，否则校验会漏 |
+| 未做的旧项 | S5-A4 设计 token 收敛（第九轮披露延后）、S5-P4 / ★3 / ★5 / S5-R4（用户签字项）、机制扩展 B/A/C 取舍 |

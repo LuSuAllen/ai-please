@@ -2,7 +2,7 @@
 
 像素风手机竖屏审核游戏：你是 04 号窗口的边境审核员，逐一核对 AI 服务的入境申请，盖章放行或拒签。
 
-- **3 天 30 位访客**：D01 首日 8 位 → D02 名单变更 10 位 → D03 特赦日 12 位，逐日解锁。
+- **4 天 46 位访客**：D01 首日 8 位 → D02 名单变更 10 位 → D03 特赦日 12 位 → D04 十六条规则日 16 位，逐日解锁。D01–D03 是冻结的教学与进阶关（内容固定），D04 起由 `src/data/specs.ts` 的关卡配方生成。
 - **每局按种子重新洗牌**：14 个访客模板 + 6 张手工卡（特殊豁免 / 规则冲突），配额、字段、线索、姓名全由 `seed` 派生；同种子必得同一局。
 - 7 条规则 / 数次名单与命令变更 / 双结局（STRICT MODE · HUMAN MODE）。
 - 线上：**https://lusuallen.github.io/ai-please/**（GitHub Pages，push `main` 自动发布）
@@ -33,12 +33,12 @@ const preactAlias = [
 ];
 ```
 
-等价性不是"应该没问题"，是量过的：**72 组生成快照哈希不变** `6ea6656d4ab9ad0e`、**50 单测全过**、**18 场景 / 325 断言全过**、**6 个关键界面与 React 产物逐像素一致（0 像素差异）**。`react` / `react-dom` 仍留在 `dependencies` 里只作类型来源，不参与打包。
+等价性不是"应该没问题"，是量过的：**冻结区 D01–D03 的 72 组生成快照哈希不变** `6ea6656d4ab9ad0e`（新关单独汇总，不污染旧哈希）、**56 单测全过**、**19 场景 / 339 断言全过**、**6 个关键界面与 React 产物逐像素一致（0 像素差异）**。`react` / `react-dom` 仍留在 `dependencies` 里只作类型来源，不参与打包。
 
 ## 门禁与验收
 
 ```bash
-npm test               # 10 个套件：生成器 / 规则求值 / 存档 / 不变量 / 性能
+npm test               # 12 个套件：生成器 / 规则求值 / 存档 / 不变量 / 性能 / 关卡配方
 npm run stress         # 10000 局全部过不变量校验（含 oracle 复算）
 npm run verify:budget  # 首屏 JS ≤70kB、首屏 CSS ≤6.2kB、全部 JS ≤74kB、总产物 ≤260kB
 npm run verify:local   # build + budget + test 一条龙
@@ -49,7 +49,7 @@ npm run verify:local   # build + budget + test 一条龙
 ```bash
 npm run build
 npm run serve:dist          # http://127.0.0.1:4175/ai-please/
-npm run verify:acceptance   # 18 场景 / 325 断言，证据写到 /tmp/ai-please-acceptance
+npm run verify:acceptance   # 19 场景 / 339 断言，证据写到 /tmp/ai-please-acceptance
 ```
 
 调试某一局：`http://127.0.0.1:5173/?day=D03&seed=20261024`。URL 带种子时只在**没有可续玩进度**的情况下自动开局——刷新不会吞掉存档。

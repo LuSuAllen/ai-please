@@ -1,0 +1,191 @@
+import { useEffect, useRef, useState } from 'react';
+import type { GameState, Mode, Move, Verdict, Visitor } from '../types/game';
+import { STAMP_MS } from '../game/engine';
+import { StatusBar } from '../components/StatusBar';
+import { PassportDoc } from '../components/PassportDoc';
+import { PassportZoom } from '../components/PassportZoom';
+import { RuleDrawer, RuleToggle } from '../components/RuleDrawer';
+import { ActionBar } from '../components/ActionBar';
+import { FeedbackOverlay } from '../components/FeedbackOverlay';
+import { UpdateToast } from '../components/UpdateToast';
+import { TutorialSheet } from '../components/TutorialSheet';
+import { ModeChoice } from '../components/ModeChoice';
+
+interface Props {
+  state: GameState;
+  visitor: Visitor;
+  total: number;
+  isLast: boolean;
+  showVerdict: boolean;
+  onMove: (m: Move) => void;
+  onInspect: () => void;
+  onNext: () => void;
+  onOpenRules: () => void;
+  onCloseRules: () => void;
+  onAckUpdate: () => void;
+  onCloseTutorial: () => void;
+  onChooseMode: (m: Mode) => void;
+}
+
+function clockOf(visitor: Visitor): string {
+  const parts = visitor.submittedAt.split('·');
+  return parts.length > 1 ? parts[1].trim() : '09:00';
+}
+
+export function GameScreen(props: Props) {
+  const { state, visitor, total, isLast } = props;
+  const [passportOpen, setPassportOpen] = useState(false);
+  const [stamp, setStamp] = useState<Verdict | null>(null);
+  const timerRef = useRef<number | null>(null);
+
+  // 换访客时复位护照层与印章，避免上一位的章串到下一位
+  useEffect(() => {
+    setPassportOpen(false);
+    setStamp(null);
+    if (timerRef.current !== null) {
+      window.clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+  }, [visitor.id]);
+
+  useEffect(
+    () => () => {
+      if (timerRef.current !== null) window.clearTimeout(timerRef.current);
+    },
+    [],
+  );
+
+  // 盖章：立刻派发判定（分数与状态由 engine 单一来源计算），章落定后再移交反馈层。
+  // 用 STAMP_MS 而不是监听 animationend —— reduced-motion 会把动画压到 0.01ms。
+  function handleStamp(move: Verdict) {
+    if (stamp !== null || state.phase !== 'playing' || state.pendingUpdate !== null) return;
+    setStamp(move);
+    props.onMove(move);
+    timerRef.current = window.setTimeout(() => {
+      timerRef.current = null;
+      setStamp(null);
+      setPassportOpen(false);
+    }, STAMP_MS);
+  }
+
+  const lockActions = state.phase !== 'playing' || state.pendingUpdate !== null;
+
+  return (
+    <div className="stage">
+      <div className="stage-bleed" />
+
+      <StatusBar
+        index={state.index}
+        total={total}
+        funds={state.funds}
+        score={state.score}
+        records={state.records}
+        clock={clockOf(visitor)}
+      />
+
+      <main className="main">
+        <PassportDoc
+          visitor={visitor}
+          inspected={state.inspected}
+          onOpen={() => setPassportOpen(true)}
+        />
+
+        {visitor.signals.length > 0 ? (
+          <div className="panel">
+            <div className="panel-head">
+              <span className="panel-title">ANOMALY SCAN</span>
+              <span className="tag amber">{visitor.signals.length} FLAG</span>
+            </div>
+            <div className="panel-body">
+              <div className="signal-stack">
+                {visitor.signals.map((s) => (
+                  <div key={s.code} className={`signal ${s.level}`}>
+                    <span className="sig-code">{s.code}</span>
+                    <span>{s.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        <div className={`panel deep-panel${state.inspected ? '' : ' capped'}`}>
+          <div className="panel-head">
+            <span className="panel-title">DEEP FILE · INSPECT RESULT</span>
+            <span className={`tag ${state.inspected ? 'green' : 'dim'}`}>
+              {state.inspected ? 'OPEN' : 'SEALED'}
+            </span>
+          </div>
+          <div className="panel-body">
+            {state.inspected ? (
+              <div>
+                <div className="deep-rows">
+                  <div className="info-row">
+                    <span className="info-key">DEVICE</span>
+                    <span className="info-val mono-num">{visitor.device}</span>
+                  </div>
+                  <div className="info-row">
+                    <span className="info-key">SUBMITTED</span>
+                    <span className="info-val mono-num">{visitor.submittedAt}</span>
+                  </div>
+                </div>
+                {visitor.hiddenClues.map((c) => (
+                  <div className="clue" key={c}>
+                    <span>{c}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="locked">
+                <span className="locked-line" />
+                <span>INSPECT TO UNSEAL · ¥25</span>
+                <span className="locked-line" />
+              </div>
+            )}
+          </div>
+        </div>
+
+      </main>
+
+      <RuleToggle index={state.index} onOpen={props.onOpenRules} />
+
+      <ActionBar
+        onMove={props.onMove}
+        onInspect={props.onInspect}
+        inspected={state.inspected}
+        disabled={lockActions}
+      />
+
+      {state.pendingUpdate ? (
+        <UpdateToast update={state.pendingUpdate} onAck={props.onAckUpdate} />
+      ) : null}
+
+      {passportOpen ? (
+        <PassportZoom
+          visitor={visitor}
+          inspected={state.inspected}
+          stamp={stamp}
+          onStamp={handleStamp}
+          onClose={() => setPassportOpen(false)}
+        />
+      ) : null}
+
+      {state.ruleDrawerOpen ? (
+        <RuleDrawer index={state.index} onClose={props.onCloseRules} />
+      ) : null}
+
+      {state.tutorialOpen ? <TutorialSheet onClose={props.onCloseTutorial} /> : null}
+
+      {props.showVerdict ? <ModeChoice onChoose={props.onChooseMode} /> : null}
+
+      {state.phase === 'feedback' && state.lastRecord && stamp === null ? (
+        <FeedbackOverlay
+          record={state.lastRecord}
+          visitor={visitor}
+          isLast={isLast}
+          onNext={props.onNext}
+        />
+      ) : null}
+    </div>
+  );
+}

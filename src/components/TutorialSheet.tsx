@@ -9,7 +9,7 @@ interface Props {
 const STEPS: { n: string; t: string; d: string }[] = [
   { n: '01', t: '读申请', d: '核对 IP 地区、时区、语言、账号地区、申请服务、访问理由与设备号，找出彼此矛盾的线索。' },
   { n: '02', t: '对规则再检查', d: '打开 RULES OF THE DAY 对照 R01–R07；需要更多证据时，先花 ¥25 使用 INSPECT。' },
-  { n: '03', t: '下判断并承担结果', d: '选择 APPROVE 或 DENY。判对 +100，误放行 −150，误拒绝 −100；十位访客后进入复盘。' },
+  { n: '03', t: '下判断并承担结果', d: '选择 APPROVE 或 DENY。判对 +100，误放行 −150，误拒绝 −100；当天访客审完后进入复盘。' },
 ];
 
 export function TutorialSheet({ onClose, context = 'game' }: Props) {

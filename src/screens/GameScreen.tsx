@@ -5,6 +5,7 @@ import { StatusBar } from '../components/StatusBar';
 import { PassportDoc } from '../components/PassportDoc';
 import { PassportZoom } from '../components/PassportZoom';
 import { RuleDrawer, RuleToggle } from '../components/RuleDrawer';
+import { rulesForEvents } from '../data/rules';
 import { ActionBar } from '../components/ActionBar';
 import { FeedbackOverlay } from '../components/FeedbackOverlay';
 import { UpdateToast } from '../components/UpdateToast';
@@ -69,12 +70,14 @@ export function GameScreen(props: Props) {
   }
 
   const lockActions = state.phase !== 'playing' || state.pendingUpdate !== null;
+  const ruleCount = state.run ? rulesForEvents(state.run.events).length : 0;
 
   return (
     <div className="stage">
       <div className="stage-bleed" />
 
       <StatusBar
+        day={state.run?.day ?? 'DAY'}
         index={state.index}
         total={total}
         funds={state.funds}
@@ -147,7 +150,7 @@ export function GameScreen(props: Props) {
 
       </main>
 
-      <RuleToggle index={state.index} onOpen={props.onOpenRules} />
+      <RuleToggle ruleCount={ruleCount} onOpen={props.onOpenRules} />
 
       <ActionBar
         onMove={props.onMove}
@@ -170,13 +173,19 @@ export function GameScreen(props: Props) {
         />
       ) : null}
 
-      {state.ruleDrawerOpen ? (
-        <RuleDrawer index={state.index} onClose={props.onCloseRules} />
+      {state.ruleDrawerOpen && state.run ? (
+        <RuleDrawer run={state.run} index={state.index} onClose={props.onCloseRules} />
       ) : null}
 
       {state.tutorialOpen ? <TutorialSheet onClose={props.onCloseTutorial} /> : null}
 
-      {props.showVerdict ? <ModeChoice onChoose={props.onChooseMode} /> : null}
+      {props.showVerdict ? (
+        <ModeChoice
+          day={state.run?.day ?? 'DAY'}
+          conflictCode={state.run?.visitors.find((v) => v.templateId.startsWith('C-'))?.code}
+          onChoose={props.onChooseMode}
+        />
+      ) : null}
 
       {state.phase === 'feedback' && state.lastRecord && stamp === null ? (
         <FeedbackOverlay

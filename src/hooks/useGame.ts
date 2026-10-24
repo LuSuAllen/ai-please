@@ -1,21 +1,20 @@
-import { useCallback, useEffect, useMemo, useReducer, useSyncExternalStore } from 'react';
-import { VISITORS } from '../data/visitors';
-import { RULE_UPDATES } from '../data/rules';
-import { FUNDS_TABLE, START_FUNDS, resolveReview } from '../game/engine';
-import type { GameState, Mode, Move } from '../types/game';
+import { useCallback, useEffect, useReducer, useSyncExternalStore } from 'react';
+import { FUNDS_TABLE, START_FUNDS, resolveReview } from '../game/engine.ts';
+import { generateRun } from '../game/generator.ts';
+import { DAY_IDS, getBlueprint } from '../data/levels.ts';
+import type { GameState, GeneratedRun, Mode, Move, RuleUpdate } from '../types/game.ts';
 import {
   clearRun,
   getStorageFailure,
   subscribeStorageFailure,
   loadMeta,
-  loadRun,
   saveMeta,
   saveRun,
   type SavedRun,
-} from '../game/storage';
+} from '../game/storage.ts';
 
 type Action =
-  | { type: 'START' }
+  | { type: 'START'; day: string; seed: number }
   | { type: 'MOVE'; move: Move }
   | { type: 'INSPECT' }
   | { type: 'NEXT' }
@@ -42,6 +41,7 @@ export function initialState(): GameState {
   return {
     phase: 'home',
     ...blankRun(),
+    run: null,
     mode: null,
     seenUpdates: [],
     lastRecord: null,
@@ -51,53 +51,60 @@ export function initialState(): GameState {
   };
 }
 
-function nextUpdateAt(index: number, seen: number[]) {
-  return RULE_UPDATES.find((u) => u.atIndex === index && !seen.includes(u.atIndex)) ?? null;
+function nextUpdateAt(updates: RuleUpdate[], index: number, seen: number[]) {
+  return updates.find((u) => u.atIndex === index && !seen.includes(u.atIndex)) ?? null;
 }
 
 function reducer(state: GameState, action: Action): GameState {
   switch (action.type) {
-    case 'START':
+    case 'START': {
+      let run: GeneratedRun | null = generateRun(action.day, action.seed);
+      for (let bump = 1; !run && bump <= 3; bump += 1) run = generateRun(action.day, action.seed + bump);
+      if (!run) return { ...state, phase: 'home' };
       return {
         ...state,
         phase: 'playing',
         ...blankRun(),
-        seenUpdates: RULE_UPDATES.filter((u) => u.atIndex === 0).map((u) => u.atIndex),
+        run,
+        seenUpdates: run.updates.filter((u) => u.atIndex === 0).map((u) => u.atIndex),
         lastRecord: null,
         mode: null,
         ruleDrawerOpen: false,
         pendingUpdate: null,
         tutorialOpen: !loadMeta().tutorialSeen,
       };
+    }
 
     case 'RESUME': {
-      const { run } = action;
-      const safeIndex = Math.min(Math.max(run.index, 0), VISITORS.length - 1);
-      const completed = run.index >= VISITORS.length || run.records.length >= VISITORS.length;
-      const seenUpdates = run.seenUpdates ?? RULE_UPDATES.filter((u) => u.atIndex < safeIndex).map((u) => u.atIndex);
-      const phase = completed ? 'verdict' : (run.phase ?? 'playing');
+      const saved = action.run;
+      if (!saved.run) return state;
+      const total = saved.total;
+      const safeIndex = Math.min(Math.max(saved.index, 0), total - 1);
+      const completed = saved.index >= total || saved.records.length >= total;
+      const phase = completed ? 'verdict' : saved.phase;
       return {
         ...state,
         phase,
+        run: saved.run,
         index: safeIndex,
-        score: run.score,
-        funds: run.funds,
-        inspected: run.inspected ?? (run.inspectedCount > run.records.filter((record) => record.inspected).length),
-        inspectedCount: run.inspectedCount,
-        records: run.records,
-        seenUpdates,
-        lastRecord: phase === 'feedback' ? (run.lastRecord ?? run.records[run.records.length - 1] ?? null) : null,
+        score: saved.score,
+        funds: saved.funds,
+        inspected: saved.inspected,
+        inspectedCount: saved.inspectedCount,
+        records: saved.records,
+        seenUpdates: saved.seenUpdates,
+        lastRecord: phase === 'feedback' ? (saved.lastRecord ?? saved.records[saved.records.length - 1] ?? null) : null,
         mode: null,
         ruleDrawerOpen: false,
-        pendingUpdate: phase === 'playing' ? nextUpdateAt(safeIndex, seenUpdates) : null,
+        pendingUpdate: phase === 'playing' ? nextUpdateAt(saved.run.updates, safeIndex, saved.seenUpdates) : null,
         tutorialOpen: false,
       };
     }
 
     case 'MOVE': {
-      if (state.phase !== 'playing' || state.pendingUpdate) return state;
+      if (state.phase !== 'playing' || state.pendingUpdate || !state.run) return state;
       if (action.move === 'INSPECT') return reducer(state, { type: 'INSPECT' });
-      const visitor = VISITORS[state.index];
+      const visitor = state.run.visitors[state.index];
       if (!visitor) return state;
       const record = resolveReview(visitor, action.move, state.inspected);
       return {
@@ -111,7 +118,7 @@ function reducer(state: GameState, action: Action): GameState {
     }
 
     case 'INSPECT': {
-      if (state.phase !== 'playing' || state.pendingUpdate || state.inspected) return state;
+      if (state.phase !== 'playing' || state.pendingUpdate || state.inspected || !state.run) return state;
       return {
         ...state,
         inspected: true,
@@ -121,9 +128,9 @@ function reducer(state: GameState, action: Action): GameState {
     }
 
     case 'NEXT': {
-      if (state.phase !== 'feedback') return state;
+      if (state.phase !== 'feedback' || !state.run) return state;
       const nextIndex = state.index + 1;
-      if (nextIndex >= VISITORS.length) {
+      if (nextIndex >= state.run.total) {
         return { ...state, phase: 'verdict', lastRecord: null };
       }
       return {
@@ -132,15 +139,12 @@ function reducer(state: GameState, action: Action): GameState {
         index: nextIndex,
         inspected: false,
         lastRecord: null,
-        pendingUpdate: nextUpdateAt(nextIndex, state.seenUpdates),
+        pendingUpdate: nextUpdateAt(state.run.updates, nextIndex, state.seenUpdates),
       };
     }
 
     case 'TOGGLE_RULES':
-      return {
-        ...state,
-        ruleDrawerOpen: action.open ?? !state.ruleDrawerOpen,
-      };
+      return { ...state, ruleDrawerOpen: action.open ?? !state.ruleDrawerOpen };
 
     case 'ACK_UPDATE':
       return {
@@ -158,18 +162,22 @@ function reducer(state: GameState, action: Action): GameState {
     case 'MODE':
       return { ...state, mode: action.mode, phase: 'result' };
 
-    case 'RESTART':
+    case 'RESTART': {
+      if (!state.run) return { ...state, phase: 'home' };
+      const run = generateRun(state.run.day, state.run.seed + 1) ?? state.run;
       return {
         ...state,
         phase: 'playing',
         ...blankRun(),
+        run,
         mode: null,
-        seenUpdates: [],
+        seenUpdates: run.updates.filter((u) => u.atIndex === 0).map((u) => u.atIndex),
         lastRecord: null,
         ruleDrawerOpen: false,
         pendingUpdate: null,
         tutorialOpen: false,
       };
+    }
 
     case 'HOME':
       return { ...state, phase: 'home', lastRecord: null, ruleDrawerOpen: false, pendingUpdate: null };
@@ -179,15 +187,32 @@ function reducer(state: GameState, action: Action): GameState {
   }
 }
 
+/** 生成期随机只由 seed 决定；这里只负责"抽一个新种子"，不参与生成算法 */
+function randomSeed(): number {
+  if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
+    const buf = new Uint32Array(1);
+    crypto.getRandomValues(buf);
+    return buf[0] % 1_000_000_000;
+  }
+  return Math.floor(Math.random() * 1_000_000_000);
+}
+
 export function useGame() {
   const [state, dispatch] = useReducer(reducer, undefined, initialState);
-  const visitor = VISITORS[state.index];
-  const total = VISITORS.length;
+  const visitor = state.run ? state.run.visitors[state.index] : undefined;
+  const total = state.run?.total ?? 0;
 
   // 进度落盘：刷新后可以接着审，不出现死局
   useEffect(() => {
+    if (!state.run) return;
     if (state.phase === 'playing' || state.phase === 'feedback' || state.phase === 'verdict') {
       saveRun({
+        v: 3,
+        seed: state.run.seed,
+        genVersion: state.run.genVersion,
+        day: state.run.day,
+        total: state.run.total,
+        run: state.run,
         index: state.index,
         phase: state.phase,
         inspected: state.inspected,
@@ -201,18 +226,33 @@ export function useGame() {
       });
     }
   }, [state.phase, state.index, state.score, state.funds, state.inspectedCount, state.records,
-    state.inspected, state.seenUpdates, state.pendingUpdate, state.lastRecord]);
+    state.inspected, state.seenUpdates, state.pendingUpdate, state.lastRecord, state.run]);
 
-  // 结算时写最高分并清空临时存档
+  // 结算时写最高分、按日成绩并解锁下一天
   useEffect(() => {
-    if (state.phase === 'result') {
+    if (state.phase === 'result' && state.run) {
       clearRun();
       const meta = loadMeta();
-      if (state.score > meta.bestScore) saveMeta({ bestScore: state.score });
+      const day = state.run.day;
+      const bestByDay = { ...meta.bestByDay, [day]: Math.max(meta.bestByDay[day] ?? 0, state.score) };
+      const idx = DAY_IDS.indexOf(day as (typeof DAY_IDS)[number]);
+      const nextDay = idx >= 0 && idx + 1 < DAY_IDS.length ? DAY_IDS[idx + 1] : meta.unlockedDay;
+      const unlockedDay =
+        DAY_IDS.indexOf(nextDay as (typeof DAY_IDS)[number]) > DAY_IDS.indexOf(meta.unlockedDay as (typeof DAY_IDS)[number])
+          ? nextDay
+          : meta.unlockedDay;
+      saveMeta({
+        bestScore: Math.max(meta.bestScore, state.score),
+        bestByDay,
+        unlockedDay,
+      });
     }
-  }, [state.phase, state.score]);
+  }, [state.phase, state.score, state.run]);
 
-  const start = useCallback(() => dispatch({ type: 'START' }), []);
+  const start = useCallback((day?: string, seed?: number) => {
+    const target = day && getBlueprint(day) ? day : DAY_IDS[0];
+    dispatch({ type: 'START', day: target, seed: seed ?? randomSeed() });
+  }, []);
   const move = useCallback((m: Move) => dispatch({ type: 'MOVE', move: m }), []);
   const inspect = useCallback(() => dispatch({ type: 'INSPECT' }), []);
   const next = useCallback(() => dispatch({ type: 'NEXT' }), []);
@@ -223,19 +263,16 @@ export function useGame() {
   const restart = useCallback(() => dispatch({ type: 'RESTART' }), []);
   const home = useCallback(() => dispatch({ type: 'HOME' }), []);
 
-  const resume = useCallback(() => {
-    const run = loadRun();
-    if (run) dispatch({ type: 'RESUME', run });
+  const resume = useCallback((saved: SavedRun) => {
+    dispatch({ type: 'RESUME', run: saved });
   }, []);
 
   const storageFailure = useSyncExternalStore(subscribeStorageFailure, getStorageFailure, () => null);
-  const savedRun = useMemo(() => loadRun(), []);
 
   return {
     state,
     visitor,
     total,
-    savedRun,
     storageFailure,
     actions: {
       start,

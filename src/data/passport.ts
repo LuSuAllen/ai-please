@@ -1,5 +1,5 @@
 import type { Visitor } from '../types/game';
-import { REGION_MAP } from './regions';
+import { REGION_MAP } from './regions.ts';
 
 /**
  * 护照展示字段。

@@ -6,7 +6,13 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1 --port 5173",
     "build": "tsc --noEmit && vite build && node scripts/postbuild.mjs",
-    "preview": "vite preview --host 127.0.0.1 --port 4173"
+    "preview": "vite preview --host 127.0.0.1 --port 4173",
+    "test": "node --experimental-strip-types --test tests/*.test.ts",
+    "verify:budget": "node scripts/check-budget.mjs",
+    "serve:dist": "node scripts/serve-dist.mjs",
+    "verify:acceptance": "node --experimental-strip-types scripts/verify-v3.mjs --url http://127.0.0.1:4175/ai-please/ --out /tmp/ai-please-acceptance",
+    "verify:local": "npm run build && npm run verify:budget && npm test",
+    "stress": "node --experimental-strip-types scripts/stress-invariants.mts 10000"
   },
   "dependencies": {
     "react": "^18.3.1",

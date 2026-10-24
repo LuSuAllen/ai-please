@@ -1,6 +1,7 @@
 import type { ReviewRecord } from '../types/game';
 
 interface Props {
+  day: string;
   index: number;
   total: number;
   funds: number;
@@ -9,7 +10,7 @@ interface Props {
   clock: string;
 }
 
-export function StatusBar({ index, total, funds, score, records, clock }: Props) {
+export function StatusBar({ day, index, total, funds, score, records, clock }: Props) {
   return (
     <header className="statusbar">
       <div className="statusbar-top">
@@ -17,7 +18,7 @@ export function StatusBar({ index, total, funds, score, records, clock }: Props)
           <span className="brand-mark">
             AI<b>,</b> PLEASE
           </span>
-          <span className="brand-day">DAY 01</span>
+          <span className="brand-day">{day}</span>
         </div>
         <span className="status-clock">{clock}</span>
       </div>

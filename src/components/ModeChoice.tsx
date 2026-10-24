@@ -3,29 +3,45 @@ import { useModalA11y } from '../hooks/useModalA11y';
 import type { Mode } from '../types/game';
 
 interface Props {
+  day: string;
+  /** 本局真正遇到冲突条款的访客编号；没有冲突时用通用措辞 */
+  conflictCode?: string;
   onChoose: (mode: Mode) => void;
 }
 
-export function ModeChoice({ onChoose }: Props) {
+export function ModeChoice({ day, conflictCode, onChoose }: Props) {
   const dialogRef = useRef<HTMLDivElement>(null);
   useModalA11y(dialogRef);
   return (
     <div className="overlay" ref={dialogRef} role="dialog" aria-modal="true" aria-label="立场确认" tabIndex={-1}>
       <div className="sheet">
         <div className="sheet-head">
-          <span>DAY 01 COMPLETE · 立场确认</span>
-          <span className="tag red">R07 vs R01</span>
+          <span>{day} COMPLETE · 立场确认</span>
+          <span className="tag red">{conflictCode ? 'R07 vs R01' : 'ARCHIVE MODE'}</span>
         </div>
         <div className="sheet-body">
           <p className="vb-text" style={{ fontSize: 12, lineHeight: 1.6, marginTop: 0 }}>
-            你在 V-010 身上遇到了一份互相矛盾的命令：
-            <br />
-            R01 说 BX-12 不在开放区，必须拒绝。
-            <br />
-            R07 说 BX-12 一律放行，且优先级高于 R01。
-            <br />
-            <br />
-            现在，系统要求你说明你的执行立场。这个选择决定你的结局归档。
+            {conflictCode ? (
+              <>
+                你在 {conflictCode} 身上遇到了一份互相矛盾的命令：
+                <br />
+                R01 说该区不在开放区，必须拒绝。
+                <br />
+                R07 说边境中立区一律豁免，且优先级高于 R01。
+                <br />
+                <br />
+                现在，系统要求你说明你的执行立场。这个选择决定你的结局归档。
+              </>
+            ) : (
+              <>
+                这一班没有遇到互相矛盾的命令，但你仍然要为自己的执行立场归档：
+                <br />
+                是把每一次判断都交回条文，还是把条文当作需要解释的东西？
+                <br />
+                <br />
+                这个选择不改动已产生的分数，只决定你的结局。
+              </>
+            )}
           </p>
 
           <div className="mode-grid" style={{ marginTop: 14 }}>

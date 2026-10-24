@@ -1,7 +1,7 @@
 # PROJECT STATUS — AI, PLEASE / AI SERVICE BORDER INSPECTOR
 
 > 本文件是唯一事实来源。凡是没在这里贴出验证证据的东西，一律视为"未测试"。
-> 最后更新：2026-10-24（第五轮：存档公平性 + 三步教学 + 无障碍，10/10 场景 + 25 项全流程回归全过）
+> 最后更新：2026-10-24（第六轮：多关卡 + 种子随机化，30 位访客 / 3 天 / 20 个模板与卡池；本地 10 场景 241 断言 + 47 单测全过）
 
 ---
 
@@ -17,8 +17,9 @@
 | 阶段 4 | 特殊事件与剧情 | ✅ 已落地并验证 |
 | 阶段 2.8 | 稳定性与无障碍（存档恢复公平性 / 三步教学 / 弹层键盘语义） | ✅ 完成，10 场景 104 断言 + 25 项全流程回归全过 |
 | 阶段 5 | 现场展示优化 | ⬜ 待开始 |
+| 阶段 6 | 多关卡 + 种子随机化（3 天 / 30 位 / oracle 单源判分） | ✅ 完成，本地 241 断言 + 47 单测 + 400×3 局分布抽样全过（§13） |
 
-**当前阻塞：无。用户已授权按优先级连续推进（不再逐项确认），第五轮已交付并复验（§12）。§6 中 ★2 已落地；★1/★3/★4/★5 涉及玩法数值与首屏信息取舍，仍按「需签字」保留。**
+**当前阻塞：无。用户已授权按优先级连续推进（不再逐项确认），第五轮已交付并复验（§12），第六轮已交付（§13）。§6 中 ★2 已落地；★1/★3/★4/★5 涉及玩法数值与首屏信息取舍，仍按「需签字」保留。**
 
 ---
 
@@ -27,7 +28,17 @@
 ```bash
 cd /Users/lusuallen/Downloads/ai-please
 npm run dev        # → http://127.0.0.1:5173/
-npm run build      # tsc --noEmit && vite build
+npm run build      # tsc --noEmit && vite build && postbuild
+npm test           # 生成器 / 规则求值 / 存档 / 不变量（node --test）
+npm run verify:budget   # 首屏 JS ≤70kB、全部 JS ≤74kB、总产物 ≤260kB
+```
+
+验收（需要先构建，再用 Pages 等价静态服务跑，别用 `vite preview`，原因见 §12.3 坑 1）：
+
+```bash
+npm run build
+npm run serve:dist          # → http://127.0.0.1:4175/ai-please/
+npm run verify:acceptance   # 10 场景，证据写 /tmp/ai-please-acceptance
 ```
 
 技术栈：React 18 + TypeScript + Vite 5 + 纯 CSS。无后端、无数据库、无登录、无真实 AI API、无支付、无重型依赖（deps 仅 react / react-dom）。
@@ -471,3 +482,114 @@ PASS: 25/25 checks                                        → /tmp/live-e2e
 ### 12.5 线上地址
 
 `https://lusuallen.github.io/ai-please/`（部署链路见 §11）
+
+---
+
+## 13. 实现记录：第六轮（多关卡 + 种子随机化，2026-10-24）
+
+**需求出处**：用户原话「关卡更多更随机，现在都是固定的，并且只有 10 人」（@CTO @CPO）。CPO 出取舍文档、CTO 出工程规格（`docs/design/levels-random.md` / `docs/design/levels-random-cto.md`），冲突处以 CTO 规格为准。
+
+### 13.1 交付内容
+
+| 维度 | 之前（第五轮） | 现在（第六轮） |
+| --- | --- | --- |
+| 阵容 | 硬编码 10 位，常量 `VISITORS` | 生成器按 `seed + dayId` 现算，3 天共 30 位（8 / 10 / 12） |
+| 判定来源 | 模板里手写 `correct` | 唯一来源 `src/game/rules-eval.ts` 的 `evaluateVisitor()`（oracle），生成期算出并写入快照 |
+| 可玩内容 | 10 位固定访客 | 14 个访客模板 + 6 张手工卡（3 特殊 / 3 冲突），按蓝图配额与难度权重随机组合 |
+| 规则变更 | 固定 `atIndex 3/6/8` | 由蓝图 `events` 驱动：R06 上线、开放区名单变更、特赦窗口、R07 紧急豁免令 |
+| 存档 | `run:v2` 单局 | `run:v3` 存整局快照（含 run/index/score/funds/records/seenUpdates），v2 旧档自动迁移成 D00 可续玩 |
+| 关卡推进 | 单局 10 位 | D01 通关解锁 D02，D02 通关解锁 D03；`bestByDay` 按天记录最高分 |
+| 评分 | 固定阈值 | 不变式保留（`gradeOf(score,total)`），错判惩罚上调至 `wrongApprove -150`，让"准确率主导"落地 |
+
+**三个关卡蓝图**（`src/data/levels.ts`）：
+
+| 天 | 人数 | 配额 N/D/A/I/S/C | 事件 |
+| --- | --- | --- | --- |
+| D01 · 首日窗口 | 8 | 3/1/2/1/1/0 | R06 上线 @4 |
+| D02 · 名单变更 | 10 | 3/2/3/1/1/0 | R06 @3、开放区变更 @7（开 SG-03 / 关 TZ-07） |
+| D03 · 特赦日 | 12 | 3/2/4/1/1/1 | R06 @3、特赦 @5（窗口 3 位）、名单变更 @6、R07 豁免令 @8 |
+
+### 13.2 生成流水线（`src/game/generator.ts`）
+
+1. `masterSeed(dayId, seed)` → 命名子流 `fork('slots' / 'slot-N' / 'name-N')`。生成路径禁 `Math.random` / `Date.now`：`grep -rn "Math.random\|Date.now" src/game src/data` 只命中 `rng.ts:3` 的一句注释；随机种子只在 `src/hooks/useGame.ts:191` 用 `crypto.getRandomValues` 抽一次，不参与阵容生成。
+2. 蓝图 → 槽位配额 → 卡片槽（S/C）优先落位 → 剩余槽位按模板池洗牌填充，排布 `maxPlacementTries=40` 次重试；若蓝图带 `zoneChange`，A 类槽位优先挑 A-ZONE，保证名单变更后立刻遇到"该区已关闭"的现场。
+3. 每槽位物化草稿（`maxSlotRetries=8` 次），重试时避开最近 6 位用过的模板、相邻位不同模板、相邻位不同 IP 地区/服务，`avatarSeed` 与 `fingerprint` 局内唯一 → oracle 复算 → `validateRun()` 校验 → 整局失败则换子流重试（`maxRunRetries=4`）→ 仍失败降级到 `D00`（不允许白屏）。
+4. 反重复指纹：`fingerprint = hash32(地区|时区|语言|账号区|服务|模版|线索)`，用于同局去重与"同 seed 同指纹"验收。
+
+### 13.3 验证证据（全部为实测）
+
+**A. 单测（node --test，10 个套件）**
+
+```text
+$ npm test
+ℹ tests 47   ℹ pass 47   ℹ fail 0
+```
+
+覆盖：`rng`（向量/分支/shuffle 稳定性）、`zones`（名单变更时点、特赦窗口、R06/R07 生效区间）、`rules`（规则装配与广播文案）、`evaluator`（R01–R07 + 特赦 + 维护豁免 + AMBIGUOUS + 时区差）、`generator`（同 seed 幂等、不同 day 必不同、指纹唯一、配额精确、无禁词）、`solvability/invariants`（3 天 × 40 seed 全过 `validateRun`）、`storage`（v3 读写、20KB 预算、写失败可见）、`legacy`（D00 逐字段相等）、`distribution`（通过率区间）、`perf`（p95 ≤16ms）。
+
+**B. 10000 局压力取证（DOD 要求）**
+
+```bash
+$ npm run stress
+runs=10000 failures=0 p50=0.16ms p95=0.30ms p99=0.56ms
+perDay=D01:3334 D02:3333 D03:3333
+```
+
+每局都跑 `validateRun()`：oracle 复算一致、配额、`requiresInspect` 必带 warn/alert 信号、判定前可见文本禁词零命中、事件索引/时点自洽、单局指纹唯一、通过率落在 `[0.45, 0.68]`。
+
+**C. 分布抽样（400 seeds/天）**
+
+```text
+D01 fail=0 approve=0.625 inspectAvg=1.71
+D02 fail=0 approve=0.600 inspectAvg=1.66
+D03 fail=0 approve=0.550 inspectAvg=1.63 inspMax=3
+```
+
+模板覆盖：D03 的 3 张冲突卡各自 100–198 次、2 张特殊卡 191–209 次，说明卡池真的在轮换，而不是被前置槽位吃满。
+
+**D. 构建与预算门禁**
+
+```text
+$ npm run build
+dist/index.html 0.57 kB · assets/index-C53IDwrW.js 208.48 kB │ gzip: 69.99 kB
+dist/assets/run-d00-*.js 5.3 kB （按需 chunk，只迁移 v2 旧档时才拉）
+$ npm run verify:budget
+首屏 JS   69.88kB / 70kB   (99.8%)
+全部 JS   72.76kB / 74kB   (98.3%)
+总产物    243.08kB / 260kB  (93.5%)
+✔ 预算门禁通过
+```
+
+两个数字都记下来：Vite 自报 gzip 69.99kB，zlib level 9 实测 69.88kB，门禁以后者为准（更接近 CDN 实际压缩）。余量只剩 ~0.1kB，**下一轮加功能必须同时做减法**。
+
+**E. 端到端验收（本地 Pages 等价服务，390×844 DSF2 + 320×568）**
+
+```text
+$ npm run build && npm run serve:dist
+$ npm run verify:acceptance
+PASS: 10/10 scenarios; 241 assertions; runtimeErrors=0  → /tmp/v3-evidence3
+```
+
+场景清单：D01 全程按 oracle 判定（含故意判错一次验审计层）、通关解锁 D02 并清档、D02 广播锁操作且刷新后仍生效、INSPECT 只扣一次费并解封线索、v2 旧档迁移成 D00、未解锁的天数不可点且按天记最高分、localStorage 写失败有可见提示不白屏、D03 在 320px 无横向溢出、五个弹层焦点陷阱与焦点归还、D03 全天无答案泄漏（判定前 DOM 不含 explanation / hiddenClues）。
+
+### 13.4 本轮的设计取舍与偏离（都写在这里，别猜）
+
+1. **S-FALSE-POSITIVE 不再依赖 `blacklistRevoked` 广播**：CTO 表格要求它绑定一条撤销公告，但那需要扩 `GameEvent` 联合类型并在蓝图里补事件。实际做法是把"该条目今天已撤销"做成开档线索（`hiddenClues`），事实字段保持干净（APPROVE、无需开档也可判对，开档只是确认）。好处：D01/D02 也能用这张卡；代价：少了一次广播教学。**这是对规格的有限偏离，已在此登记。**
+2. **D00 旧档快照改成按需 chunk**：把 10 位访客整体塞进首屏会让 gzip 超 70kB（实测 +1.83kB）。改成 `await import()` 后首屏 69.88kB，只有存在 v2 旧档时才会拉那个 chunk。代价：迁移路径多一次异步。
+3. **URL `?day=&seed=` 不再覆盖已有存档**：验收脚本需要它，但玩家刷新页面时不能因为一个分享链接就把进度清掉。现在只有"没有可续玩进度"时才自动开局（`hasResumableSave()`）。
+4. **R07 只豁免 R01**：CTO 原文是"边境通行豁免"，CPO 的冲突卡 D3 又要求"豁免只覆盖开放区检查、时区错仍要拒"。按后者落地：R07 生效后 BX-12 的 R01 违规被豁免，R02–R06 照常判。
+5. **`ending.ts` 迁出并去掉写死的 V-007/V-010**：文案改为读本局 `total/correct/inspectedCount/exemptApproved`，否则 8/10/12 人的局会说出错误编号。
+
+### 13.5 本轮踩过的坑
+
+1. **`node --test` 跑 `.ts` 必须给相对导入补 `.ts` 扩展名**（`--experimental-strip-types` 不做无扩展名解析），但 `src` 里原有代码全是无扩展名。做法：给值导入补 `.ts`，`import type` 保留原样（会被擦除）。tsconfig 的 `allowImportingTsExtensions` 正好允许。
+2. **macOS 的 `sed -i` 要 `sed -i ''`**，否则报 `unescaped newline inside substitute pattern`，且会静默不改文件——批量改导入时踩了一次，改用 python 落盘。
+3. **验收脚本 CDP evaluate 默认 12s 会在第 10 个场景偶发超时**（连续 12 次 reload + 广播轮询）。放宽到 20s 后 10/10 稳定；不是业务 bug，但没有证据前不能当成"环境抖动"打发。
+4. **禁词扫描要扫到模板文案**：`tenureClue` 原来写"历史申请 N 次驳回"，"驳回"在判定前就泄露了结论倾向，改成"需补充材料"。
+5. 预算一旦贴线，**每次改文案都要重新量**：`verify:budget` 已进 CI，构建后必跑。
+
+### 13.6 仍未签字 / 未做的
+
+- ★1 首屏动词（`START GAME` vs 更具体的动词）—— 未签，保持现状。
+- ★4 结算顺序（先看结局还是先看逐条复盘）—— 未签，保持"复盘 → 结局"。
+- 阶段 5「现场展示优化」：未开始。

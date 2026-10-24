@@ -1,6 +1,6 @@
 import type { GameState } from '../types/game';
-import { VISITORS } from '../data/visitors';
-import { endingOf, gradeOf } from '../game/engine';
+import { endingOf } from '../game/ending';
+import { gradeOf } from '../game/engine';
 
 interface Props {
   state: GameState;
@@ -9,21 +9,32 @@ interface Props {
   onHome: () => void;
 }
 
+/** 因豁免条款而通过的申请：维护豁免 / 特赦 / 紧急令覆盖 */
+const EXEMPT_TEMPLATES = new Set(['S-MAINT-UND', 'S-AMNESTY', 'C-OVERRIDE']);
+
 export function ResultScreen({ state, bestScore, onRestart, onHome }: Props) {
-  const total = VISITORS.length;
+  const run = state.run;
+  const visitors = run?.visitors ?? [];
+  const total = run?.total ?? 0;
   const correct = state.records.filter((r) => r.isCorrect).length;
   const wrong = state.records.length - correct;
   const wrongApprove = state.records.filter((r) => !r.isCorrect && r.move === 'APPROVE').length;
   const wrongDeny = state.records.filter((r) => !r.isCorrect && r.move === 'DENY').length;
   const grade = gradeOf(state.score, total);
-  const ending = state.mode ? endingOf(state.mode) : null;
+  const exemptApproved = state.records.filter((r) => {
+    const visitor = visitors.find((v) => v.id === r.visitorId);
+    return r.isCorrect && r.move === 'APPROVE' && visitor !== undefined && EXEMPT_TEMPLATES.has(visitor.templateId);
+  }).length;
+  const ending = state.mode
+    ? endingOf(state.mode, { total, correct, wrong, inspectedCount: state.inspectedCount, exemptApproved })
+    : null;
 
   return (
     <div className="stage">
       <div className="stage-bleed" />
       <div className="result">
         <div className="result-head">
-          <div className="home-kicker">DAY 01 · SHIFT REPORT</div>
+          <div className="home-kicker">{run?.day ?? 'DAY'} · SHIFT REPORT</div>
           <div className={`result-grade ${grade.tone}`}>{grade.grade}</div>
           <div className="home-sub2" style={{ marginTop: 4 }}>
             最高分 {Math.max(bestScore, state.score)}
@@ -85,7 +96,7 @@ export function ResultScreen({ state, bestScore, onRestart, onHome }: Props) {
           <div className="panel-body">
             <div className="log">
               {state.records.map((r) => {
-                const v = VISITORS.find((x) => x.id === r.visitorId);
+                const v = visitors.find((x) => x.id === r.visitorId);
                 return (
                   <div className="log-row" key={r.visitorId}>
                     <span className="mv">{r.code}</span>

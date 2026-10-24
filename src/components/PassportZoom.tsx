@@ -4,7 +4,6 @@ import type { CSSProperties, MouseEvent } from 'react';
 import type { Verdict, Visitor } from '../types/game';
 import { REGION_MAP, SERVICE_MAP } from '../data/regions';
 import { derivePassport } from '../data/passport';
-import { STAMP_MS } from '../game/engine';
 import { PixelAvatar } from './PixelAvatar';
 
 const ZOOM = 1.6;
@@ -208,5 +207,3 @@ export function PassportZoom({ visitor, inspected, stamp, onStamp, onClose }: Pr
     </div>
   );
 }
-
-export const PASSPORT_STAMP_MS = STAMP_MS;

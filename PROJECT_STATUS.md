@@ -644,3 +644,34 @@ PASS: 10/10 scenarios; 241 assertions; runtimeErrors=0   → /tmp/live-v3
 - `react` / `react-dom` 仍留在 `dependencies`：只作为 `@types` 的解析来源和 dev 兜底，不进产物；删掉会让类型解析变脆，收益为零。
 - 回退成本 = 删掉 `vite.config.ts` 里的 `preactAlias` 一段，其余代码零改动。
 - 未做：路由级代码分割（只有 1 个路由，分割只会增加请求数）。
+
+### 14.6 第三批：死导出清理（可证明无人引用）
+
+用脚本把 `src/` 全部 `export` 名与实际引用做全量比对，只留下两处真无人调用的：
+
+- `src/game/generator.ts` 的 `GenerateOptions`（早先设计过对象入参，最终用了位置入参 `generateRun(dayId, seed)`）；
+- `src/components/PassportZoom.tsx` 的 `PASSPORT_STAMP_MS` 再导出与随之空转的 `STAMP_MS` 导入。
+
+CSS 侧同样全量比对（`.class` 出现次数 vs `.tsx/.ts`），**0 个死类**——第一批删掉的 5 个死样式是当时唯一的残留。
+
+### 14.7 线上验收
+
+提交 `6527432`（框架减法）+ 本批死导出清理推送 `main` → `deploy.yml` 重建 → 线上 HTML 换成 `assets/index-2uFeCSUM.js`（轮询第 4 次命中，约 30s）。同一套脚本在线上重跑：
+
+```text
+PASS: 10/10 scenarios; 241 assertions; runtimeErrors=0   → /tmp/live-subtraction
+```
+
+线上证据：`docs/shots/19-live-round7-broadcast.png`（线上广播锁操作）、`docs/shots/20-round7-preload-home.png`（线上首屏）。
+
+### 14.8 本轮净收益
+
+| 指标 | 改造前 | 改造后 | 变化 |
+| --- | --- | --- | --- |
+| 首屏 JS（gzip） | 69.76kB | 31.86kB | −37.90kB（−54.3%） |
+| 全部 JS（gzip） | 72.53kB | 34.74kB | −37.79kB |
+| 总产物 | 186.09kB | 118.06kB | −68.03kB |
+| 单测 / 端到端 | 47 / 10 场景 241 断言 | 同左 | 无回退 |
+| 生成结果 | 72 组快照 | 哈希不变 | 逐字节一致 |
+
+首屏预算占用从 99.7% 降到 45.5%——后续加内容不必再为 0.1kB 抠文案。

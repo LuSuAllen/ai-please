@@ -177,12 +177,6 @@ function assignGroups(
   return null;
 }
 
-export interface GenerateOptions {
-  /** 手工构造蓝图之外的一局（测试用）；默认按 dayId 取蓝图 */
-  dayId: string;
-  seed: number;
-}
-
 export function generateRun(dayId: string, seed: number): GeneratedRun | null {
   return generateRunWithErrors(dayId, seed).run;
 }

@@ -24,14 +24,14 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      # 门禁在构建前跑：单测（生成器/评分器/存档/不变量）+ 不变量压力测试
+      # 门禁在构建前跑：单测（生成器/评分器/存档/不变量/展示预算）
       - run: npm test
       # enablement: true —— 仓库还没开 Pages 时，用工作流 token 自动开通（免去网页设置那一步）
       - uses: actions/configure-pages@v5
         with:
           enablement: true
       - run: npm run build
-      # 预算门禁在构建后跑：首屏 JS ≤70kB、总产物 ≤260kB
+      # 预算门禁在构建后跑：首屏 JS ≤70kB、首屏 CSS ≤6.2kB、总产物 ≤260kB
       - run: npm run verify:budget
       - uses: actions/upload-pages-artifact@v3
         with:

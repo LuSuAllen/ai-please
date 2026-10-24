@@ -117,6 +117,8 @@ async function page({ query = '', meta = {}, v3 = null, legacy = null, storageFa
   current = await CDP.open(target.webSocketDebuggerUrl);
   await current.send('Page.enable'); await current.send('Runtime.enable'); await current.send('Network.enable');
   await current.send('Network.setCacheDisabled', { cacheDisabled: true });
+  // 无头窗口里键盘事件需要显式焦点仿真，否则 Escape/Tab 可能被丢弃
+  await current.send('Emulation.setFocusEmulationEnabled', { enabled: true });
   await current.send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: false });
   const metaPayload = { schema: 3, tutorialSeen: true, muted: true, bestScore: 0, bestByDay: {}, unlockedDay: 'D01', ...meta };
   const source = `(() => {
@@ -162,6 +164,7 @@ async function reloadResume() {
 async function click(selector) {
   const pos = await current.eval(`(() => { const e=document.querySelector(${JSON.stringify(selector)}); if(!e) throw Error('Missing '+${JSON.stringify(selector)}); e.scrollIntoView({block:'center'}); const r=e.getBoundingClientRect(); const x=r.x+r.width/2,y=r.y+r.height/2; const hit=document.elementFromPoint(x,y); return {x,y,disabled:!!e.disabled,hit:hit===e||e.contains(hit)}; })()`);
   assert(!pos.disabled && pos.hit, `real-click reachable: ${selector}`, pos);
+  await current.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: pos.x, y: pos.y });
   await current.send('Input.dispatchMouseEvent', { type: 'mousePressed', x: pos.x, y: pos.y, button: 'left', clickCount: 1 });
   await current.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: pos.x, y: pos.y, button: 'left', clickCount: 1 });
 }
@@ -409,6 +412,163 @@ try {
       await leaveFeedback(i === day3.total - 1);
     }
     await wait(`document.querySelector('.mode-card.strict')`, 'd03 verdict');
+  });
+
+
+  // ---------- 第九轮新增场景（§4.4） ----------
+
+  await scenario('home-copy-matches-rule-count', async () => {
+    await page({ meta: { unlockedDay: 'D03' } });
+    await wait(`document.querySelector('.home-buttons')`, 'home for rule copy');
+    const d03 = await bodyText();
+    assert(/12\s*位访客/.test(d03), 'D03 首页给出 12 位访客', d03.slice(0, 90));
+    assert(/7\s*条规则/.test(d03), 'D03 首页规则数为 7', d03.slice(0, 90));
+    assert(!d03.includes('七条规则'), '不再出现写死的「七条规则」');
+    await clickText('D01');
+    await wait(`/8\\s*位访客/.test(document.body.innerText)`, 'home switched to D01');
+    const d01 = await bodyText();
+    assert(/6\s*条规则/.test(d01), '切到 D01 后规则数变为 6', d01.slice(0, 90));
+    assert(!/12\s*位访客/.test(d01), '切换关卡后人数文案同步更新');
+    await shot('home-rule-count');
+  });
+
+  await scenario('progressbar-exposes-position', async () => {
+    await page({ query: `?day=D01&seed=${SEED}` });
+    await wait(`document.querySelector('.actionbar')`, 'progressbar launch');
+    const before = await current.eval(`(() => { const e=document.querySelector('.stat-progress'); return e && { role:e.getAttribute('role'), min:e.getAttribute('aria-valuemin'), max:e.getAttribute('aria-valuemax'), now:e.getAttribute('aria-valuenow'), text:e.getAttribute('aria-valuetext'), selfHidden:e.getAttribute('aria-hidden'), trackHidden:document.querySelector('.pip-track')?.getAttribute('aria-hidden') }; })()`);
+    assert(before?.role === 'progressbar', '进度条暴露 role=progressbar', before);
+    assert(before.min === '0' && before.max === String(day1.total), 'aria-valuemin/max 对齐 0..N', before);
+    assert(before.now === '0', '未判定时 aria-valuenow=0', before);
+    assert(/共\s*8\s*位/.test(before.text || ''), 'aria-valuetext 含「共 8 位」', before.text);
+    assert(before.selfHidden === null, '.stat-progress 自身不再 aria-hidden', before);
+    assert(before.trackHidden === 'true', '.pip-track 仍 aria-hidden（视觉轨道）', before);
+    for (const update of day1.updates.filter((u) => u.atIndex === 0)) await ackToast(update.atIndex);
+    await judge(day1.visitors[0].correct);
+    const after = await current.eval(`document.querySelector('.stat-progress')?.getAttribute('aria-valuenow')`);
+    assert(after === '1', '判定一位后 aria-valuenow=1', after);
+    const afterText = await current.eval(`document.querySelector('.stat-progress')?.getAttribute('aria-valuetext') ?? ''`);
+    assert(/已判\s*1\s*位/.test(afterText), 'aria-valuetext 同步已判位数', afterText);
+    await shot('progressbar-after-one');
+  });
+
+  await scenario('stamp-wait-bounded', async () => {
+    await page({ query: `?day=D01&seed=${SEED}` });
+    await wait(`document.querySelector('.actionbar')`, 'stamp launch');
+    const stampTimed = async (label, code) => {
+      // 等新访客及其信号面板渲染稳定再取样，否则布局位移会让点击落空
+      await wait(`document.body.innerText.includes(${JSON.stringify(code)})`, `${label}: visitor ${code} rendered`);
+      await sleep(150);
+      await click('.pp-open');
+      await wait(`document.querySelector('.ppz-stamp-row') && document.querySelector('.pp-overlay')?.contains(document.activeElement)`, `${label}: passport zoom focused`);
+      const t0 = Date.now();
+      await click('.ppz-stamp-row .btn-approve');
+      await wait(`document.querySelector('.feedback')`, `${label}: feedback after stamp`);
+      const ms = Date.now() - t0;
+      await leaveFeedback(false);
+      return ms;
+    };
+    await current.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
+    const reducedMs = await stampTimed('reduced-motion', day1.visitors[0].code);
+    assert(reducedMs < 260, 'reduced-motion 下盖章等待≈0ms（<260ms）', reducedMs);
+    await current.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'no-preference' }] });
+    const normalMs = await stampTimed('default', day1.visitors[1].code);
+    assert(normalMs >= 280 && normalMs <= 700, '默认盖章等待约 340ms（280–700ms）', normalMs);
+  });
+
+  await scenario('scoring-table-first-two-only', async () => {
+    await page({ query: `?day=D01&seed=${SEED}` });
+    await wait(`document.querySelector('.actionbar')`, 'scoring table launch');
+    for (let i = 0; i < 3; i += 1) {
+      for (const update of day1.updates.filter((u) => u.atIndex === i)) await ackToast(update.atIndex);
+      await judge(day1.visitors[i].correct);
+      const text = await current.eval(`document.querySelector('.feedback')?.innerText ?? ''`);
+      if (i < 2) assert(text.includes('SCORING TABLE'), `第 ${i + 1} 位反馈保留计分表`);
+      else assert(!text.includes('SCORING TABLE'), `第 ${i + 1} 位反馈不再重复计分表`);
+      await leaveFeedback(false);
+    }
+  });
+
+  await scenario('touch-target-min-40', async () => {
+    const measure = (selectors) => current.eval(`(() => { const out=[]; for (const sel of ${JSON.stringify(selectors)}) for (const e of document.querySelectorAll(sel)) { const r=e.getBoundingClientRect(); if (r.height>0) out.push({ sel, h: Math.round(r.height*10)/10 }); } return out; })()`);
+    await page({ meta: { unlockedDay: 'D02' } });
+    await wait(`document.querySelector('.home-buttons')`, 'touch targets on home');
+    for (const t of await measure(['.day-pick button', '.home-buttons .btn'])) assert(t.h >= 40, `首页触控目标 ≥40：${t.sel}`, t);
+    await clickText('START GAME');
+    await wait(`document.querySelector('.actionbar')`, 'touch targets in game');
+    for (const t of await measure(['.actionbar .btn', '.pp-open', '.pp-portrait', '.pp-slots'])) assert(t.h >= 40, `游戏内触控目标 ≥40：${t.sel}`, t);
+    const at = day2.updates[0].atIndex;
+    await page({ v3: savedShape(day2, at), meta: { unlockedDay: 'D02' } });
+    await reloadResume();
+    await wait(`document.querySelector('.toast-wrap')`, 'toast for touch target');
+    for (const t of await measure(['.toast .t-action'])) assert(t.h >= 40, `toast 操作按钮 ≥40：${t.sel}`, t);
+    await shot('touch-targets');
+  });
+
+  await scenario('zoom-enabled', async () => {
+    await page({ meta: { unlockedDay: 'D01' } });
+    await wait(`document.querySelector('.home-buttons')`, 'home for viewport check');
+    const content = await current.eval(`document.querySelector('meta[name="viewport"]')?.getAttribute('content') ?? ''`);
+    assert(/width=device-width/.test(content), 'viewport 保留 width=device-width', content);
+    assert(!/maximum-scale/i.test(content), 'viewport 不再限制 maximum-scale', content);
+    assert(!/user-scalable/i.test(content), 'viewport 不再禁止 user-scalable', content);
+    assert(!/touch-action:\s*none/.test(String(await current.eval(`getComputedStyle(document.body).touchAction`))), 'body 未禁用触控手势');
+  });
+
+  await scenario('display-change-no-answer-leak', async () => {
+    await page({ v3: savedShape(day1, 0), meta: { unlockedDay: 'D01' } });
+    await reloadResume();
+    await sleep(250);
+    const v = day1.visitors[0];
+    const noLeak = async (label) => {
+      const text = await bodyText();
+      assert(!text.includes(v.explanation), `${label}: DOM 不含判定解释`, v.explanation.slice(0, 16));
+      for (const clue of v.hiddenClues) assert(!text.includes(clue), `${label}: DOM 不含开档线索`);
+      assert(!/VERDICT (ACCEPTED|REJECTED)/.test(text), `${label}: DOM 不含审计结论`);
+    };
+    await noLeak('初始');
+    await click('.pp-open');
+    await wait(`document.querySelector('.pp-overlay')`, 'passport zoom open');
+    await noLeak('护照放大层打开');
+    await click('.ppz-head .tag.dim');
+    await wait(`!document.querySelector('.pp-overlay')`, 'passport zoom closed');
+    await noLeak('护照放大层关闭');
+    await click('.rule-toggle');
+    await wait(`document.querySelector('.drawer')`, 'rule drawer open');
+    await noLeak('规则抽屉打开');
+    await click('.drawer .sheet-head .tag.dim');
+    await wait(`!document.querySelector('.drawer')`, 'rule drawer closed');
+    await current.send('Emulation.setDeviceMetricsOverride', { width: 320, height: 568, deviceScaleFactor: 1, mobile: false });
+    await sleep(150);
+    await noLeak('视口收窄到 320');
+    await current.send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false });
+    await sleep(150);
+    await noLeak('视口恢复');
+    await judge(v.correct);
+    const feedback = await current.eval(`document.querySelector('.feedback')?.innerText ?? ''`);
+    assert(feedback.includes(v.explanation), '判定之后才在反馈层揭示解释');
+  });
+
+  await scenario('round9-visual-and-live-region-contracts', async () => {
+    const idx = day3.visitors.findIndex((x, i) => x.signals.length > 0 && !day3.updates.some((u) => u.atIndex === i));
+    if (idx < 0) throw new Error('D03 fixture 中没有「带信号且无广播」的访客');
+    await page({ v3: savedShape(day3, idx), meta: { unlockedDay: 'D03' }, width: 320, height: 568 });
+    await reloadResume();
+    const signals = await current.eval(`Array.from(document.querySelectorAll('.signal')).map(e=>({ level: e.className.replace('signal','').trim(), label: e.querySelector('.sig-level')?.innerText ?? '' }))`);
+    assert(signals.length > 0, '该访客渲染了信号卡', signals);
+    for (const s of signals) {
+      const expected = s.level.toUpperCase();
+      assert(['ALERT', 'WARN', 'INFO'].includes(expected), '信号 class 是合法等级', s);
+      assert(s.label === expected, '信号卡文本含 ALERT/WARN/INFO', s);
+    }
+    const tier = await current.eval(`(() => { const e=document.querySelector('.pp-tier'); if(!e) return null; const r=e.getBoundingClientRect(); return { display: getComputedStyle(e).display, h: r.height, text: e.innerText }; })()`);
+    assert(tier && tier.display !== 'none' && tier.h > 0, '320 宽下 .pp-tier 不再整体隐藏', tier);
+    await judge(day3.visitors[idx].correct);
+    const sub = await current.eval(`(() => { const e=document.querySelector('.stamp-sub'); if(!e) return null; const s=getComputedStyle(e); return { size: s.fontSize, color: s.color }; })()`);
+    assert(sub?.size === '11px', '.stamp-sub 字号 11px', sub);
+    assert(sub?.color === 'rgb(134, 152, 179)', '.stamp-sub 用 --ink-dim rgb(134,152,179)', sub);
+    const live = await current.eval(`(() => { const e=document.querySelector('.sr-only[aria-live="polite"]'); return e ? { role: e.getAttribute('role'), text: e.innerText } : null; })()`);
+    assert(live?.role === 'status' && /判定/.test(live.text), '判定结果通过 aria-live=polite 播报', live);
+    await shot('round9-contracts-320');
   });
 
   assert(report.runtimeErrors.length === 0, 'no uncaught browser runtime exceptions', report.runtimeErrors);

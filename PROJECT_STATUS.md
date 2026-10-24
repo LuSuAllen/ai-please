@@ -455,6 +455,19 @@ dist/index.html 0.57 kB · css 22.95 kB (gzip 5.41) · js 186.09 kB (gzip 61.38)
 4. **注入式 `localStorage.clear()` 在每次新文档都会执行**，会把刷新恢复场景假阳性化；必须用 `sessionStorage` 标记只播种一次。
 5. 三条断言失败里，只有「removeItem 失败提示消失」是真业务缺陷（见 12.1 #3），另外两条是脚本缺陷——**失败先 dump 证据再改代码**。
 
-### 12.4 线上地址
+### 12.4 线上验收（在真实地址上跑，不是本地）
 
-`https://lusuallen.github.io/ai-please/`（部署链路见 §11；本轮提交后由 `deploy.yml` 自动重建发布）。
+提交 `6468959` 推送到 `main` → `deploy.yml` 自动重建 → 线上 HTML 已换成新产物 `assets/index-BDCfSyiQ.js`（轮询 4 次命中，约 40s）。
+
+同一套脚本在 **`https://lusuallen.github.io/ai-please/`** 上重跑：
+
+```text
+PASS: 10/10 scenarios  (104/104 断言, runtimeErrors=0)   → /tmp/live-qa
+PASS: 25/25 checks                                        → /tmp/live-e2e
+```
+
+线上证据图：`docs/shots/16-live-round5.png`（线上跑完 10/10 的结算页）。
+
+### 12.5 线上地址
+
+`https://lusuallen.github.io/ai-please/`（部署链路见 §11）

@@ -115,13 +115,24 @@ export function PassportDoc({ visitor, inspected, onOpen }: Props) {
           <span className="pp-reason-text">{visitor.reason}</span>
         </div>
 
-        <button type="button" className="pp-slots" onClick={onOpen} aria-label="查看护照详情">
+        <button
+          type="button"
+          className="pp-slots"
+          onClick={onOpen}
+          aria-label="查看护照详情；印章位：放行、拒绝，均未盖章"
+        >
           <span className="pp-slot">
-            <span className="pp-slot-word">APPROVE</span>
+            <span className="pp-slot-word">
+              <span className="cn">放行</span>
+              <span className="bi-en">APPROVE</span>
+            </span>
             <span className="pp-slot-state">未盖章</span>
           </span>
           <span className="pp-slot deny">
-            <span className="pp-slot-word">DENY</span>
+            <span className="pp-slot-word">
+              <span className="cn">拒绝</span>
+              <span className="bi-en">DENY</span>
+            </span>
             <span className="pp-slot-state">未盖章</span>
           </span>
         </button>

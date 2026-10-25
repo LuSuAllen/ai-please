@@ -195,6 +195,14 @@ try {
     await shot(`${tag}-02-game`);
     await measure(`${tag}-game`);
 
+    // 护照下半屏：印章位两排（320 上它在折叠线以下，必须单独取证）
+    await current.eval(`(() => { const m = document.querySelector('.main'); if (m) m.scrollTop = m.scrollHeight; })()`);
+    await sleep(250);
+    await shot(`${tag}-02b-game-slots`);
+    await measure(`${tag}-02b-game-slots`);
+    await current.eval(`(() => { const m = document.querySelector('.main'); if (m) m.scrollTop = 0; })()`);
+    await sleep(120);
+
     await current.eval(`document.querySelector('.rule-toggle').click()`);
     await wait(`document.querySelector('.drawer')`, 'drawer');
     await sleep(200);

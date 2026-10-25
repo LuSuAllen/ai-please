@@ -41,7 +41,7 @@ chore(ci): PR 上跑 verify:all
 npm run verify:all
 ```
 
-按序跑：`tsc --noEmit` + `vite build` + `postbuild` → 单测 61 条 → 预算门禁（首屏 JS ≤70kB、首屏 CSS ≤6.2kB、总产物 ≤260kB）→ 起 `dist` 静态服务器跑验收 20 场景 / 424 断言 → 双语探针（320/390 折行、溢出、遮挡）。
+按序跑：`tsc --noEmit` + `vite build` + `postbuild` → 单测 61 条 → 预算门禁（首屏 JS ≤70kB、首屏 CSS ≤6.2kB、总产物 ≤260kB）→ 起 `dist` 静态服务器跑验收 20 场景 / 428 断言 → 双语探针（320/390 折行、溢出、遮挡）。
 
 - 退出码 0 才算「测试无问题」，口头「我这儿好的」不算。
 - CI 在 PR 上用同一条命令跑（`.github/workflows/ci.yml`），结果贴回 PR。

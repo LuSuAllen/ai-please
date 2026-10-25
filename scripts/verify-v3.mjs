@@ -555,6 +555,13 @@ try {
     await clickText('START GAME');
     await wait(`document.querySelector('.actionbar')`, 'touch targets in game');
     for (const t of await measure(['.actionbar .btn', '.pp-open', '.pp-portrait', '.pp-slots'])) assert(t.h >= 40, `游戏内触控目标 ≥40：${t.sel}`, t);
+    // 护照封面印章位：上下两排，每排中文主标 + 英文副标
+    const slots = await current.eval(`Array.from(document.querySelectorAll('.pp-slot')).map((e) => e.innerText.replace(/\\s+/g, ' ').trim())`);
+    assert(slots.length === 2, '护照封面两枚印章位', slots);
+    assert(slots.some((t) => /放行/.test(t) && /APPROVE/.test(t)), '放行印章位中文+英文并存', slots);
+    assert(slots.some((t) => /拒绝/.test(t) && /DENY/.test(t)), '拒绝印章位中文+英文并存', slots);
+    const stacked = await current.eval(`(() => { const s = Array.from(document.querySelectorAll('.pp-slot')).map((e) => e.getBoundingClientRect()); return s.length === 2 ? { top: Math.round(s[0].top), second: Math.round(s[1].top), sameRow: Math.abs(s[0].top - s[1].top) < 4 } : null; })()`);
+    assert(stacked && !stacked.sameRow, '两枚印章位上下排布（不是并排）', stacked);
     const at = day2.updates[0].atIndex;
     await page({ v3: savedShape(day2, at), meta: { unlockedDay: 'D02' } });
     await reloadResume();

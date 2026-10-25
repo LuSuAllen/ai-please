@@ -1355,8 +1355,8 @@ button {
 
 .pp-slots {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
+  grid-template-columns: 1fr;
+  gap: 10px;
   cursor: pointer;
 }
 
@@ -1367,7 +1367,17 @@ button {
   gap: 1px;
   padding: 5px 6px;
   border: 2px dashed #2a3d5c;
-  color: #4a5f80;
+  color: var(--ink-dim);
+}
+
+/* 印章位：中文主标 + 英文副标（两排按钮各占一行） */
+.pp-slot .cn {
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.pp-slot .bi-en {
+  font-size: 8px;
 }
 
 .pp-slot-word {
@@ -1377,13 +1387,12 @@ button {
 }
 
 .pp-slot-state {
-  font-size: 7px;
+  font-size: 8px;
   letter-spacing: 0.16em;
 }
 
 .pp-slot.deny {
-  border-color: #45272f;
-  color: #6b4150;
+  color: var(--ink-dim);
 }
 
 .pp-mrz {

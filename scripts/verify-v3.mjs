@@ -243,12 +243,13 @@ try {
   chrome.on('error', (e) => { spawnError = e; });
   chrome.stderr.on('data', (data) => { chromeLog = (chromeLog + data.toString()).slice(-4000); });
   let ready = false;
-  for (let i = 0; i < 100; i++) {
+  // CI runner 冷启动可能 >10s，给到 30s；失败时连退出码一起报，别只给空字符串
+  for (let i = 0; i < 300; i++) {
     if (spawnError) throw spawnError;
     try { const r = await fetch(`${endpoint}/json/version`); if (r.ok) { report.browser = await r.json(); ready = true; break; } } catch {}
     await sleep(100);
   }
-  if (!ready) throw new Error(`Chrome CDP unavailable: ${chromeLog}`);
+  if (!ready) throw new Error(`Chrome CDP unavailable (exit=${chrome.exitCode}): ${chromeLog}`);
 
   // D01/D02/D03 的三局由 node 侧现算，UI 只负责呈现与记录
   const day1 = fixtureRun('D01');
@@ -436,6 +437,15 @@ try {
     await page({ meta: { unlockedDay: 'D01' } });
     await wait(`document.querySelector('.home-buttons')`, 'home');
     await clickText('VIEW HOW TO PLAY');
+    const tutHead = await current.eval(`document.querySelector('.sheet-head')?.innerText ?? ''`);
+    assert(/玩法说明/.test(tutHead) && /HOW TO PLAY/.test(tutHead), '玩法说明标题中英并存', tutHead);
+    const tutName = await current.eval(`document.querySelector('.rule-name')?.innerText ?? ''`);
+    assert(/读申请/.test(tutName), '玩法说明步骤名为中文', tutName);
+    const tutBody = await current.eval(`document.querySelector('.rule-body')?.innerText ?? ''`);
+    assert(/核对 IP 地区/.test(tutBody), '玩法说明正文为中文', tutBody);
+    const tutFoot = await current.eval(`document.querySelector('.sheet-foot')?.innerText ?? ''`);
+    assert(/跳过说明/.test(tutFoot) && /SKIP/.test(tutFoot), '教程按钮中英并存', tutFoot);
+    assert(/下一步/.test(tutFoot) && /NEXT/.test(tutFoot), '教程主按钮中英并存', tutFoot);
     await modalFocus('[role="dialog"]', '[data-v3-probe="1"]');
     await clickText('START GAME');
     await wait(`document.querySelector('.actionbar')`, 'game start for drawer');

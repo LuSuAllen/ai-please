@@ -157,13 +157,14 @@ async function openViewport(width, height) {
 
 let port, exit = 2;
 try {
+  await rm(out, { recursive: true, force: true });
   await mkdir(out, { recursive: true });
   port = await freePort();
   profile = await mkdtemp(path.join(tmpdir(), 'ai-please-zh-probe-'));
   chrome = spawn(chromePath, ['--headless=new', '--no-sandbox', '--disable-gpu', '--no-first-run',
     '--no-default-browser-check', `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, 'about:blank'],
   { stdio: ['ignore', 'ignore', 'pipe'] });
-  for (let i = 0; i < 100; i += 1) {
+  for (let i = 0; i < 300; i += 1) {
     try { await fetch(`http://127.0.0.1:${port}/json/version`); break; } catch { await sleep(100); }
   }
 
@@ -172,6 +173,21 @@ try {
     await openViewport(w, h);
     await shot(`${tag}-01-home`);
     await measure(`${tag}-home`);
+
+    // 玩法说明（首次进入自动弹出，也是「最开始的规则说明」）：第 1 步与第 3 步各拍一张
+    await clickText('VIEW HOW TO PLAY');
+    await wait(`document.querySelector('.sheet-foot .btn-wide')`, 'tutorial');
+    await sleep(200);
+    await shot(`${tag}-10-tutorial-1`);
+    await measure(`${tag}-tutorial-1`);
+    await current.eval(`document.querySelector('.sheet-foot .btn-wide').click()`);
+    await sleep(120);
+    await current.eval(`document.querySelector('.sheet-foot .btn-wide').click()`);
+    await sleep(200);
+    await shot(`${tag}-11-tutorial-3`);
+    await measure(`${tag}-tutorial-3`);
+    await clickText('跳过说明');
+    await wait(`!document.querySelector('.sheet-foot .btn-wide')`, 'tutorial closed');
 
     await clickText('START GAME');
     await wait(`document.querySelector('.actionbar')`, 'game');
@@ -184,6 +200,13 @@ try {
     await sleep(200);
     await shot(`${tag}-03-drawer`);
     await measure(`${tag}-drawer`);
+
+    // 规则抽屉下半部分：开放区注册表（状态列已汉化）
+    await current.eval(`(() => { const b = document.querySelector('.drawer .sheet-body'); if (b) b.scrollTop = b.scrollHeight; })()`);
+    await sleep(200);
+    await shot(`${tag}-03b-drawer-registry`);
+    await measure(`${tag}-03b-drawer-registry`);
+    await current.eval(`(() => { const b = document.querySelector('.drawer .sheet-body'); if (b) b.scrollTop = 0; })()`);
     await current.eval(`document.querySelector('.drawer .sheet-head button').click()`);
     await wait(`!document.querySelector('.drawer')`, 'drawer closed');
 

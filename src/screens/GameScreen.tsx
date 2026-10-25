@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { GameState, Mode, Move, Verdict, Visitor } from '../types/game';
 import { STAMP_MS } from '../game/engine';
+import { Zh } from '../i18n/zh';
 import { StatusBar } from '../components/StatusBar';
 import { PassportDoc } from '../components/PassportDoc';
 import { PassportZoom } from '../components/PassportZoom';
@@ -101,8 +102,12 @@ export function GameScreen(props: Props) {
         {visitor.signals.length > 0 ? (
           <div className="panel">
             <div className="panel-head">
-              <span className="panel-title">ANOMALY SCAN</span>
-              <span className="tag amber">{visitor.signals.length} FLAG</span>
+              <span className="panel-title">
+                异常扫描
+              </span>
+              <span className="tag amber">
+                {visitor.signals.length} FLAG<Zh>条标记</Zh>
+              </span>
             </div>
             <div className="panel-body">
               <div className="signal-stack">
@@ -120,9 +125,12 @@ export function GameScreen(props: Props) {
 
         <div className={`panel deep-panel${state.inspected ? '' : ' capped'}`}>
           <div className="panel-head">
-            <span className="panel-title">DEEP FILE · INSPECT RESULT</span>
+            <span className="panel-title">
+              DEEP FILE<Zh>深档</Zh>
+            </span>
             <span className={`tag ${state.inspected ? 'green' : 'dim'}`}>
               {state.inspected ? 'OPEN' : 'SEALED'}
+              <Zh>{state.inspected ? '已开档' : '未开档'}</Zh>
             </span>
           </div>
           <div className="panel-body">
@@ -130,11 +138,15 @@ export function GameScreen(props: Props) {
               <div>
                 <div className="deep-rows">
                   <div className="info-row">
-                    <span className="info-key">DEVICE</span>
+                    <span className="info-key">
+                      DEVICE<Zh>设备</Zh>
+                    </span>
                     <span className="info-val mono-num">{visitor.device}</span>
                   </div>
                   <div className="info-row">
-                    <span className="info-key">SUBMITTED</span>
+                    <span className="info-key">
+                      SUBMITTED<Zh>提交时间</Zh>
+                    </span>
                     <span className="info-val mono-num">{visitor.submittedAt}</span>
                   </div>
                 </div>
@@ -147,7 +159,9 @@ export function GameScreen(props: Props) {
             ) : (
               <div className="locked">
                 <span className="locked-line" />
-                <span>INSPECT TO UNSEAL · ¥25</span>
+                <span>
+                  开档解锁 · ¥25
+                </span>
                 <span className="locked-line" />
               </div>
             )}
@@ -199,6 +213,8 @@ export function GameScreen(props: Props) {
           visitor={visitor}
           isLast={isLast}
           index={state.records.length - 1}
+          score={state.score}
+          funds={state.funds}
           onNext={props.onNext}
         />
       ) : null}

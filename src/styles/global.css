@@ -1827,3 +1827,125 @@ a:focus-visible,
 .home {
   justify-content: safe center;
 }
+
+/* ===== 双语注释层（B1）=====
+   英文是契约（DOM 必须保留），中文是理解层。
+   中文一律 letter-spacing:0 —— 拉丁字距 0.12–0.2em 套在汉字上会散架。
+   行内副注 9px 是 320 宽实测上限（.pp-k 内宽 118，ACCOUNT REGION 占 85.4）。 */
+.bi-zh {
+  font-size: 9px;
+  letter-spacing: 0;
+  font-weight: 400;
+  color: var(--ink-dim);
+  text-transform: none;
+  white-space: nowrap;
+}
+.bi-zh::before {
+  content: ' · ';
+  opacity: 0.55;
+}
+/* 有空间的大字容器（规则名 / 反馈层） */
+.bi-zh.lg {
+  font-size: 10px;
+}
+/* 可换行的中文整行（反馈层「你的判定 / 应为」） */
+.bi-line {
+  display: block;
+  margin-top: 3px;
+  font-size: 10px;
+  letter-spacing: 0;
+  font-weight: 400;
+  color: var(--ink-dim);
+  white-space: normal;
+}
+/* 动作按钮里的英文副标：中文主标 11px，英文缩到 7px 当专业名词标签 */
+.bi-en {
+  font-size: 7px;
+  letter-spacing: 0.08em;
+  font-weight: 400;
+  opacity: 0.7;
+}
+/* 按钮主标行：中文 + 英文副标同一基线，宽度控制在 .btn 内宽 82px 内 */
+.btn-main {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  white-space: nowrap;
+}
+@media (min-width: 640px) {
+  .bi-zh {
+    font-size: 10px;
+  }
+  .bi-zh.lg {
+    font-size: 11px;
+  }
+}
+/* .pp-k 内宽 118，ACCOUNT REGION 已占 85.4 → 护照字段的中文压回 8px 与英文同号 */
+.pp-k .bi-zh {
+  font-size: 8px;
+}
+@media (min-width: 640px) {
+  .pp-k .bi-zh {
+    font-size: 9px;
+  }
+}
+/* 320 宽下头栏只有 278px：标题让位给风险标签（可用性优先于装饰），标签不再被 PASSPORT 按钮压住 */
+.pp-head-tags {
+  flex: 0 0 auto;
+}
+.pp-panel .panel-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* 320 宽下 .pp-tier 被设计限制在 48% 且字号 7px——7px 汉字不可读，中文副注只在大屏保留 */
+@media (max-width: 360px) {
+  .pp-tier .bi-zh {
+    display: none;
+  }
+}
+/* 护照行内中文副注整体换行，避免窄屏出现「长文本分/析」这种断字 */
+.pp-row .pp-v .bi-zh {
+  display: inline-block;
+}
+/* 页脚提示保持单行：320 主屏没有 1px 纵向余量，多折一行就会把整页顶出滚动条 */
+.pp-footline {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+/* ── 第十二轮：中文主标（印章 / 反馈标题） ──
+   汉字不能继承拉丁字距：.stamp 的 .22em 会把「正确」从 44px 撑到 53.69px 且散架。 */
+.cn {
+  letter-spacing: 0;
+}
+
+/* 印章：中文主标 + 7px 英文副标行内并排，高度与其他字母一致；窄屏也不许折行 */
+.stamp {
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.stamp .cn {
+  text-shadow: 0 0 8px currentColor;
+}
+
+
+/* 账目行的中性（非盈亏）chip */
+.delta.flat {
+  color: var(--ink-dim);
+}
+/* 纯中文标签：清零拉丁字距（英文标签仍保留自身字距，不受影响） */
+.stat-label,
+.result-cell .k,
+.mode-card .mc-title,
+.pp-slot-state,
+.locked {
+  letter-spacing: 0;
+}
+
+/* 中文主标 + 英文副标之间留一个可读间隙（印章、标题、流水统一 6px） */
+.cn + .bi-en {
+  margin-left: 6px;
+}

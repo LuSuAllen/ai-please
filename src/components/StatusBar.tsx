@@ -25,7 +25,9 @@ export function StatusBar({ day, index, total, funds, score, records, clock }: P
 
       <div className="statusbar-bottom">
         <div className="stat">
-          <span className="stat-label">VISITOR</span>
+          <span className="stat-label">
+            访客
+          </span>
           <span className="stat-value mono-num">
             {String(index + 1).padStart(2, '0')}
             <span className="dim" style={{ color: 'var(--ink-faint)' }}>
@@ -34,11 +36,15 @@ export function StatusBar({ day, index, total, funds, score, records, clock }: P
           </span>
         </div>
         <div className="stat">
-          <span className="stat-label">FUNDS</span>
+          <span className="stat-label">
+            预算
+          </span>
           <span className={`stat-value mono-num ${funds < 400 ? 'warn' : ''}`}>¥{funds}</span>
         </div>
         <div className="stat">
-          <span className="stat-label">SCORE</span>
+          <span className="stat-label">
+            分数
+          </span>
           <span
             className={`stat-value mono-num ${score > 0 ? 'pos' : score < 0 ? 'warn' : ''}`}
           >

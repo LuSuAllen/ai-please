@@ -828,3 +828,136 @@ e2e 新增 8 个场景（原 10 场景 241 断言 → 18 场景 325 断言，只
 | 按拍板顺序仍待做 | ① 规则参数化（只挂新关）② 开档额度接入（`inspectQuota` 目前零调用点）③ R08/R09 与 D05–D08 配方 ④ 加班模式与跨关资产（职级/人事档案）⑤ 反背题三支柱（开档额度、每日规则参数化、双证据冲突） |
 | 已知缺口（本轮主动披露） | `validate.ts` 的 I8 只看**第一个** `zoneChange`，D04 因此只用单次名单变更；后续若上双 zoneChange 必须先补 I8，否则校验会漏 |
 | 未做的旧项 | S5-A4 设计 token 收敛（第九轮披露延后）、S5-P4 / ★3 / ★5 / S5-R4（用户签字项）、机制扩展 B/A/C 取舍 |
+
+## 17. 第十一轮：双语注释层（2026-10-24）
+
+拍板依据：用户反馈「英语部分过多」，要求**保留英语（专业名词）的同时给出中文注释或部分直接汉化**，照顾英文/术语薄弱的玩家（m00002）。CPO 定调：问题不是「英语太多」，而是**决策必需标签全英文、说明长文全中文，两者之间没有桥**；UI 设计师实测 320×568 主屏纵向余量为负（320 可用 347.5px / 内容 543px，375 溢出 96px），因此**主屏高度增量必须为 0**；前端开发者确认零 i18n 基建，且数据层被三道门禁锁死（快照哈希 `6ea6656d4ab9ad0e`、I6 禁词、20KB 存档上限）。
+
+### 17.1 改了什么（纯视图层，`src/data` 与 `src/game` 一行未动）
+
+| 面 | 内容 |
+| --- | --- |
+| 新增 `src/i18n/terms.ts` | 纯数据术语表：`RULE_ZH`（R01–R07）、`TIER_ZH`（normal/anomaly/inspect/special/conflict）、`MOVE_ZH`（APPROVE/DENY/INSPECT）。无 JSX，可被 `node --test` 直接导入 |
+| 新增 `src/i18n/ZhInline.tsx` | `Zh` 副注节点：输出 `<span class="bi-zh">中文</span>`，CSS 用 `::before: ' · '` 拼出「英文 · 中文」 |
+| 新增 `src/i18n/zh.tsx` | 对外入口，`export { RULE_ZH, TIER_ZH, MOVE_ZH }` + `Zh`（组件统一从这里取，测试只导入 `terms.ts`） |
+| 新增 `tests/i18n-terms.test.ts` | 4 个守护测试：每条 `RULE_BASE` 都有非空且不含拉丁字母的中文副注；术语表不出现不存在的规则码；动作/风险等级全覆盖；`rulesForEvents` 裁剪后仍全覆盖。**以后加规则不配中文会直接红** |
+| 新增 `scripts/probe-zh.mjs` | 320×568 与 390×844 双档真实点击探针：首页→局内→规则抽屉→护照放大→反馈层→整班结算，逐步 `measure()`（`.bi-zh`/.bi-line/.bi-en 的折行数、左右溢出、页面横向滚动）+ 截图。退出码 0 = 无折行/无溢出 |
+| `StatusBar` | `VISITOR · 访客`、`FUNDS · 预算`、`SCORE · 分数`；进度条 `aria-valuetext` 保持原文 |
+| `ActionBar` | 主按钮改「中文 + 英文双行」：`开档 INSPECT`、`拒绝 DENY`、`放行 APPROVE`；英文子标签 `GRANT ACCESS` / `REFUSE ENTRY` / `-¥25` 保留 |
+| `PassportDoc` | 四字段加 `Zh`：`IP REGION · 地区` / `TIMEZONE · 时区` / `ACCOUNT REGION · 账号` / `LANGUAGE · 语言`；`DECLARED REASON · 申报理由`；风险等级标签 `STANDARD · 常规` 等；页脚提示 `SURFACE LAYER · 点护照放大`、`DEEP FILE UNSEALED · 深档已开封`。MRZ、`APPROVE/DENY` 印章位、数字列保持原样 |
+| `PassportZoom` | 行值后加地名/语言/服务中文：`OR-09 · 东岸开发区`、`UTC+01:00`、`CLAUDE-ORBIT · 长文本分析`、`WITHHELD · 需开档查看`、`DAY 001 → DAY 080` 原样 |
+| `RuleDrawer` | 规则名双语 `R01 OPEN ZONE · 开放区`…`R07 EMERGENCY ORDER · 紧急豁免令`；抽屉头 `D01 · RULES OF THE DAY · 今日规则` |
+| `FeedbackOverlay` | 新增决策对照行「你的判定：放行 · 应为：放行」（此前只有 `YOU: APPROVED · REQUIRED: APPROVE`）；`SCORING TABLE · 计分表`、`JUDGEMENT BASIS · 判定依据` |
+| `HomeScreen` / `ResultScreen` / `ModeChoice` / `UpdateToast` | 首页 `AI SERVICE BORDER INSPECTOR · AI 边境审核员`、`开始游戏 START GAME`、`玩法说明 VIEW HOW TO PLAY`；结算 `SHIFT REPORT · 班次报告`、`FINAL VERDICT · 最终裁定`、`AUDIT LOG · 审核流水`、六个指标格 `CORRECT · 判定正确` 等；广播卡标题双语 |
+| `src/styles/global.css` | 只加 5 条：`.bi-zh`（9px / `letter-spacing:0` / `--ink-dim` / `white-space:nowrap` + `::before` 分隔符）、`.bi-zh.lg`（10px）、`.bi-line`/`.bi-en`（动作栏双行）、`.pp-row .pp-v .bi-zh{display:inline-block}`（窄屏整体换行，不出现「长文本分/析」断字）`.pp-footline{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}`（页脚提示永不多折一行——320 主屏多 1 行就会把整页顶出滚动条）+ 既有 `.pp-head-tags{flex:0 0 auto}`、`.pp-panel .panel-title` 省略号、`@media (max-width:360px){.pp-tier .bi-zh{display:none}}`（`pp-tier` 在该断点被设计限制 48% 宽 / 7px 字号，7px 汉字不可读） |
+
+**禁译清单（刻意保持纯英文）**：`.sig-level`（`scripts/verify-v3.mjs:563` 断言 `innerText === 'ALERT'/'WARN'/'INFO'`）、MRZ 机读码、流水号/货币数字列、`.pp-slot` 印章位、`.tag` 内 7–9px 容器、`AI, PLEASE` 品牌字。
+
+### 17.2 门禁（提交前本地）
+
+| 门禁 | 结果 |
+| --- | --- |
+| `npm run build` | `tsc --noEmit` 0 error；产物 `index-BIJNhz_d.js` + `index-DIR6dbgr.css` |
+| `npm test` | **60 通过 / 0 失败**（原 56 + 双语守护 4） |
+| `npm run verify:budget` | 首屏 JS 33.07 / 70kB（47.2%）、**首屏 CSS 5.73 / 6.2kB（92.4%）**、总产物 124.09 / 260kB（47.7%），四行全过（CSS 余量仅约 480B，后续加样式要先跑这条） |
+| `npm run verify:acceptance` | `PASS: 19/19 scenarios; 339 assertions`，`runtimeErrors=0`（断言只增不减） |
+| `node --experimental-strip-types scripts/probe-zh.mjs` | `bad=[]`、`sceneError=null`，两档 10 个状态 + 整班结算全部 `.bi-zh` 单行、无左右溢出、`documentElement.scrollWidth - clientWidth = 0` |
+| 数据层隔离 | `src/data` / `src/game` / `src/types` 与 `scripts/verify-v3.mjs` 零改动；快照哈希仍 `6ea6656d4ab9ad0e` |
+
+### 17.3 已知取舍（如实披露）
+
+| 项 | 现状 | 原因 |
+| --- | --- | --- |
+| `.pp-tier` 风险标签 | ≤360px 只显示英文（`STANDARD`/`FLAGGED`/`DEEP CHECK`），390px 起才出现 `· 常规` 等中文 | 该断点样式表把 `pp-tier` 限制在 48% 宽 / 7px 字号，7px 汉字不可读且会截断；风险状态在 390px+、颜色边框与「异常扫描」面板里仍可达 |
+| 320px 且访客理由较长 | `ACCOUNT REGION · 账号` 偶发折成两行（`ACCOUNT` / `REGION · 账号`） | 理由过长会让护照区出现内部滚动条，占掉约 15px 宽度，标签列被挤窄。行高 +11px 发生在护照内部滚动区，判定栏仍在首屏内、无裁切、无横向滚动；真实手机为浮层滚动条一般不触发。探针断言的是 `.bi-zh` 自身不折行、不溢出，父级标签折行属于既有排版余量问题 |
+| 结算页六格指标 | 320px 下 `k` 标签（如 `误放行 · WRONG APPROVE`）折两行 | 设计基线 `result-grid .k` 在纯英文时（130.8px / 127px）就已折行，加中文不改变结构，只是折得更早 |
+| `ModeChoice` 卡名 | 仍为 `STRICT MODE` / `HUMAN MODE`，中文在下方 `mc-desc` | `mc-desc` 实测 231/238px 已无余量，卡名加中文会把两列卡片顶破 |
+| 术语表位置 | 只在视图层 `src/i18n`，不进数据层 | 数据层被快照哈希 / I6 禁词 / 20KB 存档三道门禁锁死，`{en,zh}` 结构会同时打破三道 |
+
+### 17.4 复现与扩展
+
+```bash
+npm run build && npm test && npm run verify:budget
+node scripts/serve-dist.mjs 4175 &        # 探针依赖已构建的 dist
+npm run verify:acceptance
+npm run verify:zh            # = scripts/probe-zh.mjs，同样依赖 4175 上的 dist
+```
+
+新增规则/等级/动作时：先改 `src/i18n/terms.ts`，`npm test` 会在 1 秒内告诉你漏了哪条；新增英文标签时套 `.bi-zh`（小字容器）或 `.bi-line`（动作栏双行），并跑一次 `probe-zh.mjs` 确认 320 不折行、不横向滚动。
+
+证据图：`docs/shots/33-round11-bilingual-game-320.png`（局内四字段 + 三键）、`34-round11-bilingual-drawer-320.png`（规则抽屉 R01–R07）、`35-round11-bilingual-zoom-320.png`（护照放大页）、`36-round11-bilingual-feedback-320.png`（反馈层「你的判定/应为」）、`37-round11-bilingual-result-320.png`（结算页）、`38-round11-bilingual-game-390.png`（390 主视口基线）。
+
+## 18. 第十二轮：操作词汉化 + 判定反馈讲清楚（2026-10-24）
+
+用户第二条反馈原话：`诸如 Correct，Close，Password 这种可以汉化的也可以一并汉化方便用户知道是什么操作。评判后的结果反馈最好也需要汉化，提示什么结果，什么加了什么减了，对了还是错了`。
+
+### 18.1 文案三层契约（本轮确立，后续一律照此改）
+
+| 层 | 判据 | 例子 | 允许的写法 |
+| --- | --- | --- | --- |
+| L1 机器锚点 | `scripts/verify-v3.mjs` 用 `clickText` / `includes` / 负断言匹配的字面量 | `NEXT VISITOR`、`RESUME`、`START GAME`、`ACKNOWLEDGE`、`SCORING TABLE`、`RULES OF THE DAY`、`BACK TO MENU` | 英文必须是**可见 `innerText`**；不许 `display:none` / `sr-only` / 条件渲染（`START GAME` 原先只在无存档时出现，本轮改为常驻） |
+| L2 领域标签 | 决策要用、但英文可读性差的字段名 | `ACCOUNT REGION · 账号`、`IP REGION · 地区`、`R01 OPEN ZONE · 开放区` | 英文主标 + `.bi-zh` / `.bi-line` 中文副注；英文一个字母都不能少 |
+| L3 操作与状态 | 用户要"知道这是什么操作"的词 | `判定正确`、`关闭`、`展开`、`未解锁`、`未盖章`、`班次报告`、`条文模式` | 中文为主（`.cn`，必须 `letter-spacing:0`），英文降为 7px 副标或省略 |
+
+### 18.2 判定反馈层重写（`src/components/FeedbackOverlay.tsx`）
+
+信息顺序按「先结论、后证据、最后教学」重排：
+
+1. 结论：`判定正确` / `判定错误`（7px 副标 `VERDICT ACCEPTED` / `VERDICT REJECTED BY AUDIT`）；
+2. 判错归因：`误放行 · 应判拒绝` / `误拒绝 · 应判放行`（印章仍是 `正确 CORRECT` / `错误 WRONG`）；
+3. 契约对照行：`你的判定：放行 · 应为：拒绝`（保留 `YOU: … REQUIRED: {v.correct}` 英文锚点）；
+4. 本次变动：三枚 chip `分数 +100` / `预算 +120` / `开档 −25`，带 `data-kind` 与 `data-delta`，值为**存档里的真实增量**；
+5. 本单净额：`本单净额 分数 −150 · 预算 −200`（开档 −¥25 不在判定链路里，单独成行，避免"判定扣了 200 又赚 25"的错觉）；
+6. 账户前后：`账户 200 → 50 分 · ¥1240 → ¥1040`，开档时追加「开档只扣预算，不扣分数」；
+7. 依据：`判定依据` + 规则码 chip；8. 教学：`计分表 SCORING TABLE`，正文改中文「答对 +100 · 误放行 −150 · 误拒绝 −100」。
+
+`Password` 全仓库 0 命中（本项目没有输入框/凭证交互），未新造概念。
+
+### 18.3 逐文件改动
+
+| 文件 | 改动 |
+| --- | --- |
+| `src/i18n/terms.ts` | 新增 `VERDICT_ZH` / `STAMP_ZH` / `WRONG_KIND_ZH` / `METRIC_ZH` / `UI_ZH` 五张纯中文表 |
+| `src/components/FeedbackOverlay.tsx` | 按 18.2 重写；新增 `score` / `funds` props（只读，不改数据层） |
+| `src/screens/GameScreen.tsx` | `ANOMALY SCAN`→`异常扫描`、`INSPECT TO UNSEAL · ¥25`→`开档解锁 · ¥25`；向反馈层传当前 `score`/`funds` |
+| `src/components/StatusBar.tsx` | `VISITOR/FUNDS/SCORE` → `访客/预算/分数` |
+| `src/components/HomeScreen.tsx` | `LOCKED`→`未解锁`；`<small>` 修正为有存档时 `NEW SHIFT · START GAME`、无存档时 `START GAME` |
+| `src/components/ModeChoice.tsx` | `条文模式 / 人情模式`（`.bi-en` 保留 `STRICT MODE` / `HUMAN MODE`） |
+| `src/components/RuleDrawer.tsx` | `关闭 ✕`、`展开 ▸`、表头 `代码/地区/时区/语言/状态` |
+| `src/components/PassportDoc.tsx` | `NOT STAMPED`→`未盖章`；`PASSPORT ▸`→`护照 PASSPORT ▸` |
+| `src/components/PassportZoom.tsx` | `CLOSE`→`关闭`、`STAMP APPLIED`→`已盖章 · 归档中…`、`WITHHELD · 需 INSPECT`→`需开档查看` |
+| `src/screens/ResultScreen.tsx` | `班次报告 SHIFT REPORT`、六格改「判定正确/判定错误/开档次数/误放行/误拒绝/总分/预算结余」、新增开档支出行、`最终裁定 FINAL VERDICT`、`归档`、`审核流水 AUDIT LOG` |
+| `src/styles/global.css` | 新增 `.cn{letter-spacing:0}`、`.cn + .bi-en{margin-left:6px}`、`.stamp{white-space:nowrap;max-width:100%}`、`.stamp .cn{text-shadow:0 0 8px}`、`.delta.flat`、`.stat-label/.result-cell .k/.mc-title/.pp-slot-state/.locked{letter-spacing:0}` |
+| `scripts/verify-v3.mjs` | 新增场景 `bilingual-controls-keep-both-layers`（四控件中英并存、状态栏汉化、抽屉表头、有存档时 `START GAME`/`RESUME` 常驻、`第 03 / 8 位` 数字相邻）+ 6 处断言双语化（判定前无结算层、结算中文可见、`SCORING TABLE` 反向、`SEALED` 反向、`display-change` 无泄漏、反馈层中文结论/印章/错型/账目对账） |
+| `scripts/probe-zh.mjs` | 选择器扩到 `.bi-zh,.bi-line,.bi-en,.cn,.delta,.stamp,.result-cell .k,.stat-label`；行数改用「扣掉 padding/border 的内容高 ÷ line-height」；新增覆盖下限 `MIN_SPANS=90`（测量集合为空不再静默 exit 0）与判错反馈截图 |
+| `tests/i18n-terms.test.ts` | +1 条：反馈层五张表必须纯中文、错型必须说清方向（`npm test` 60 → **61**） |
+
+### 18.4 门禁（提交前本地）
+
+| 门禁 | 结果 |
+| --- | --- |
+| `npm run build` | `tsc --noEmit` 0 error；产物 `index-CKvgGFRk.js` + `index-CTIu0TO9.css` |
+| `npm test` | **61 通过 / 0 失败** |
+| `npm run verify:budget` | 首屏 JS 33.50 / 70kB（47.9%）、**首屏 CSS 5.79 / 6.2kB（93.4%）**、总产物 126.19 / 260kB（48.5%） |
+| `npm run verify:acceptance` | `PASS: 20/20 scenarios; 419 assertions`（上一轮 19/339） |
+| `npm run verify:zh` | `bad=[]`、`spans=267`、`wrongVerdictSeen=true`、`docOverflow=0`、`docOverflowY=0`（320/390 两档 10 个状态 + 判错反馈） |
+| 数据层隔离 | `src/data` / `src/game` / `src/types` 零改动；快照哈希仍 `6ea6656d4ab9ad0e` |
+
+### 18.5 已知取舍
+
+| 项 | 现状 | 原因 |
+| --- | --- | --- |
+| 反馈层在小屏可滚动 | 320×568 下 sheet 正文需滚动才能看全「计分表」 | 信息量按用户要求增加了（结论/归因/净额/账户前后），`max-height` 未突破 500px，页面本身不滚动 |
+| `YOU: APPROVED · REQUIRED: APPROVE` | 英文行在 320 仍折两行 | 这是 L1 机器锚点（`:281` 断言 `REQUIRED: {v.correct}`），只能保留；中文对照行紧随之，理解不受影响 |
+| `.pp-tier` 风险标签 | ≤360px 仍只显示英文 | 该断点被设计限制 48% 宽 / 7px 字号，中文不可读；同信息在「异常扫描」面板与颜色边框可达 |
+| 320px 长理由 | `ACCOUNT REGION · 账号` 偶发折两行 | 护照内部滚动条吃宽度，属既有排版余量问题，非本轮引入 |
+
+### 18.6 复现
+
+```bash
+npm run build && npm test && npm run verify:budget
+node scripts/serve-dist.mjs 4175 &
+npm run verify:acceptance && npm run verify:zh
+```
+
+证据图：`docs/shots/39-round12-home-320.png`、`40-round12-game-320.png`（护照入口 `护照 PASSPORT ▸`）、`41-round12-drawer-320.png`、`42-round12-verdict-correct-320.png`、`43-round12-verdict-wrong-320.png`（误放行归因 + 账户前后值）、`44-round12-result-320.png`、`45-round12-game-390.png`。

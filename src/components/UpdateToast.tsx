@@ -18,7 +18,9 @@ export function UpdateToast({ update, onAck }: Props) {
           {update.detail}
         </div>
         <button type="button" className="t-action" onClick={onAck}>
-          ACKNOWLEDGE
+          <span className="btn-main">
+            确认变更<span className="bi-en">ACKNOWLEDGE</span>
+          </span>
         </button>
       </div>
     </div>

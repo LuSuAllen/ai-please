@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { TutorialSheet } from '../components/TutorialSheet';
+import { Zh } from '../i18n/zh';
 import { DAY_IDS, getBlueprint } from '../data/levels';
 import { rulesForEvents } from '../data/rules';
 import type { Meta } from '../game/storage';
@@ -26,7 +27,9 @@ export function HomeScreen({ onStart, onResume, hasSave, meta, savedIndex, total
     <div className="stage">
       <div className="stage-bleed" />
       <div className="home">
-        <div className="home-kicker">AI SERVICE BORDER INSPECTOR</div>
+        <div className="home-kicker">
+          AI SERVICE BORDER INSPECTOR<Zh>AI 边境审核员</Zh>
+        </div>
 
         <h1 className="home-title">
           AI<em>,</em>
@@ -62,7 +65,15 @@ export function HomeScreen({ onStart, onResume, hasSave, meta, savedIndex, total
               >
                 {id}
                 <br />
-                {isLocked ? 'LOCKED' : best > 0 ? `BEST ${best}` : bp ? `${bp.visitorCount} 位` : ''}
+                {isLocked ? (
+                  <span className="cn">未解锁</span>
+                ) : best > 0 ? (
+                  `BEST ${best}`
+                ) : bp ? (
+                  `${bp.visitorCount} 位`
+                ) : (
+                  ''
+                )}
               </button>
             );
           })}
@@ -76,20 +87,27 @@ export function HomeScreen({ onStart, onResume, hasSave, meta, savedIndex, total
             disabled={locked}
           >
             开始游戏
-            <small>{hasSave ? 'START NEW SHIFT' : 'START GAME'}</small>
+            <small>{hasSave ? 'NEW SHIFT · START GAME' : 'START GAME'}</small>
           </button>
           {hasSave ? (
             <button type="button" className="btn btn-wide" onClick={onResume}>
-              RESUME · 第 {String(savedIndex + 1).padStart(2, '0')} / {total} 位
+              <span className="btn-main">
+                继续审核
+                <span className="bi-en">
+                  RESUME · 第 {String(savedIndex + 1).padStart(2, '0')} / {total} 位
+                </span>
+              </span>
             </button>
           ) : null}
           <button type="button" className="btn btn-wide btn-ghost" onClick={() => setHowTo(true)}>
-            VIEW HOW TO PLAY
+            <span className="btn-main">
+              玩法说明<span className="bi-en">VIEW HOW TO PLAY</span>
+            </span>
           </button>
         </div>
 
         <div className="home-foot">
-          BEST SCORE {meta.bestScore} · 本作为虚构世界观 · 无后端 / 无 API / 可离线
+          最高分 BEST SCORE {meta.bestScore} · 本作为虚构世界观 · 无后端 / 无 API / 可离线
         </div>
       </div>
 

@@ -266,7 +266,10 @@ try {
       const text = await bodyText();
       assert(!text.includes(v.explanation), `${v.code}: 判定前 DOM 不含解释`, v.explanation.slice(0, 20));
       for (const clue of v.hiddenClues) assert(!text.includes(clue), `${v.code}: 判定前 DOM 不含开档线索`);
-      assert(!text.includes('VERDICT ACCEPTED') && !text.includes('VERDICT REJECTED'), `${v.code}: 判定前无结算层`);
+      assert(
+        !/VERDICT (ACCEPTED|REJECTED)/.test(text) && !/判定正确|判定错误/.test(text),
+        `${v.code}: 判定前无结算层（中英双证）`,
+      );
       for (const update of day1.updates.filter((u) => u.atIndex === i)) await ackToast(update.atIndex);
       await wait(`document.body.innerText.includes(${JSON.stringify(v.code)})`, `visitor ${v.code} after ACK`);
 
@@ -279,6 +282,43 @@ try {
       assert(record?.isCorrect === (move === v.correct), `${v.code}: 判定结果符合预期`, record?.isCorrect);
       const feedback = await current.eval(`document.querySelector('.feedback')?.innerText ?? ''`);
       assert(feedback.includes(v.correct), `${v.code}: 判定后反馈层揭示应授权限`, v.correct);
+      // 双语层：结论必须中文化，英文锚点仍留在 DOM（隐藏英文 = 契约失效）
+      const sheetText = await current.eval(`document.querySelector('.sheet')?.innerText ?? ''`);
+      assert(/判定正确|判定错误/.test(sheetText), `${v.code}: 反馈层中文结论可见`, sheetText.slice(0, 40));
+      const stampText = await current.eval(
+        `document.querySelector('.feedback .stamp')?.innerText ?? ''`,
+      );
+      assert(
+        /(正确|错误)/.test(stampText) && /(CORRECT|WRONG)/.test(stampText),
+        `${v.code}: 印章中英并存`,
+        stampText,
+      );
+      assert(/你的判定：.*应为：/.test(feedback), `${v.code}: 中英对照行可见`);
+      if (!record.isCorrect) {
+        assert(
+          /(误放行 · 应判拒绝|误拒绝 · 应判放行)/.test(feedback),
+          `${v.code}: 判错时给出错型归因`,
+          feedback.slice(0, 60),
+        );
+      }
+      // 账目：文案随便改，数字必须与存档一致（这才是汉化不会改坏数值的证据）
+      const deltas = await current.eval(
+        `(() => Array.from(document.querySelectorAll('.feedback .delta')).map((e) => ({ kind: e.dataset.kind, d: Number(e.dataset.delta) })))()`,
+      );
+      assert(
+        deltas.some((x) => x.kind === 'score' && x.d === record.scoreDelta),
+        `${v.code}: 分数 chip 数值 == 存档`,
+        deltas,
+      );
+      assert(
+        deltas.some((x) => x.kind === 'funds' && x.d === record.fundDelta),
+        `${v.code}: 预算 chip 数值 == 存档`,
+        deltas,
+      );
+      if (record.inspected) {
+        assert(deltas.some((x) => x.kind === 'inspect'), `${v.code}: 开档支出单列一行`, deltas);
+      }
+      assert(/账户\s*-?\d+\s*→\s*-?\d+\s*分/.test(feedback), `${v.code}: 账户前后值可见`);
       await leaveFeedback(i === day1.total - 1);
     }
   });
@@ -290,6 +330,10 @@ try {
     await wait(`document.querySelector('.result')`, 'result screen');
     const text = await bodyText();
     assert(text.includes(`${day1.total}`), '结算展示本局人数', day1.total);
+    for (const zh of ['判定正确', '判定错误', '开档次数', '误放行', '误拒绝', '总分', '预算结余']) {
+      assert(text.includes(zh), `结算层中文可见：${zh}`);
+    }
+    assert(text.includes('SHIFT REPORT'), '结算层英文锚点仍在');
     const meta = await metaState();
     assert(meta?.schema === 3, 'meta 已升级到 v3', meta?.schema);
     assert((meta?.bestByDay?.D01 ?? 0) !== 0, '按日最高分已记录', meta?.bestByDay);
@@ -329,7 +373,7 @@ try {
     assert(paid.inspectedCount === before.inspectedCount + 1, 'INSPECT 只计一次');
     const deep = await current.eval(`document.querySelector('.deep-panel')?.innerText ?? ''`);
     for (const clue of seeded.visitors[0].hiddenClues) assert(deep.includes(clue), '开档后线索可见', clue);
-    assert(!deep.includes('SEALED'), '开档后档案解封');
+    assert(!deep.includes('SEALED') && !deep.includes('未开档'), '开档后档案解封（中英双证）');
     await shot('inspect-open');
     await reloadResume();
     const after = await runState();
@@ -485,7 +529,10 @@ try {
       await judge(day1.visitors[i].correct);
       const text = await current.eval(`document.querySelector('.feedback')?.innerText ?? ''`);
       if (i < 2) assert(text.includes('SCORING TABLE'), `第 ${i + 1} 位反馈保留计分表`);
-      else assert(!text.includes('SCORING TABLE'), `第 ${i + 1} 位反馈不再重复计分表`);
+      else {
+        assert(!text.includes('SCORING TABLE'), `第 ${i + 1} 位反馈不再重复计分表`);
+        assert(!text.includes('计分表'), `第 ${i + 1} 位反馈中文计分表也不再出现`);
+      }
       await leaveFeedback(false);
     }
   });
@@ -525,7 +572,10 @@ try {
       const text = await bodyText();
       assert(!text.includes(v.explanation), `${label}: DOM 不含判定解释`, v.explanation.slice(0, 16));
       for (const clue of v.hiddenClues) assert(!text.includes(clue), `${label}: DOM 不含开档线索`);
-      assert(!/VERDICT (ACCEPTED|REJECTED)/.test(text), `${label}: DOM 不含审计结论`);
+      assert(
+        !/VERDICT (ACCEPTED|REJECTED)/.test(text) && !/判定正确|判定错误/.test(text),
+        `${label}: DOM 不含审计结论（中英双证）`,
+      );
     };
     await noLeak('初始');
     await click('.pp-open');
@@ -571,6 +621,41 @@ try {
     const live = await current.eval(`(() => { const e=document.querySelector('.sr-only[aria-live="polite"]'); return e ? { role: e.getAttribute('role'), text: e.innerText } : null; })()`);
     assert(live?.role === 'status' && /判定/.test(live.text), '判定结果通过 aria-live=polite 播报', live);
     await shot('round9-contracts-320');
+  });
+
+  await scenario('bilingual-controls-keep-both-layers', async () => {
+    await page({ query: `?day=D01&seed=${day1.seed}` });
+    await wait(`document.querySelector('.actionbar')`, 'bilingual launch');
+    // 关键控件必须「中文可读 + 英文锚点」并存：删掉任一层都会在这里报错
+    for (const [sel, en] of [
+      ['.actionbar .btn-inspect', 'INSPECT'],
+      ['.actionbar .btn-deny', 'DENY'],
+      ['.actionbar .btn-approve', 'APPROVE'],
+      ['.pp-open', 'PASSPORT'],
+    ]) {
+      const t = await current.eval(`document.querySelector(${JSON.stringify(sel)})?.innerText ?? ''`);
+      assert(/[\u4e00-\u9fa5]/.test(t), `${sel}: 中文可读`, t);
+      assert(t.includes(en), `${sel}: 英文锚点仍在`, t);
+    }
+    const bar = await bodyText();
+    for (const zh of ['访客', '预算', '分数']) assert(bar.includes(zh), `状态栏已汉化：${zh}`);
+    assert(bar.includes('RULES OF THE DAY'), '规则入口英文锚点仍在');
+    await current.eval(`document.querySelector('.rule-toggle').click()`);
+    await wait(`document.querySelector('.drawer')`, 'bilingual drawer');
+    const drawer = await current.eval(`document.querySelector('.drawer')?.innerText ?? ''`);
+    assert(drawer.includes('RULES OF THE DAY'), '抽屉标题英文锚点仍在');
+    assert(/关闭/.test(drawer), '抽屉关闭按钮已汉化');
+    for (const zh of ['代码', '地区', '时区', '语言', '状态']) assert(drawer.includes(zh), `注册表表头已汉化：${zh}`);
+    await current.eval(`document.querySelector('.drawer .sheet-head button').click()`);
+    await wait(`!document.querySelector('.drawer')`, 'bilingual drawer closed');
+    // 保存进度后仍必须能按 START GAME（英文锚点不得条件渲染）
+    await sleep(150);
+    await page({ meta: { unlockedDay: 'D01' }, v3: savedShape(day1, 2) });
+    await wait(`document.querySelector('.home-buttons')`, 'home with save');
+    const home = await bodyText();
+    assert(home.includes('START GAME'), '有存档时 START GAME 锚点仍在');
+    assert(home.includes('RESUME'), '有存档时 RESUME 锚点仍在');
+    assert(/第 03\s*\/\s*8 位/.test(home), '续玩进度数字相邻可读', home.slice(0, 120));
   });
 
   await scenario('day4-ladder-extends', async () => {

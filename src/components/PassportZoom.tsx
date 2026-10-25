@@ -70,7 +70,7 @@ export function PassportZoom({ visitor, inspected, stamp, onStamp, onClose }: Pr
     { k: 'ACCOUNT REGION', v: visitor.accountRegion, dim: zoneName(visitor.accountRegion) },
     { k: 'LANGUAGE', v: visitor.language },
     { k: 'SERVICE', v: service?.name ?? visitor.serviceId, dim: service?.intent },
-    { k: 'DEVICE', v: inspected ? visitor.device : 'WITHHELD · 需 INSPECT' },
+    { k: 'DEVICE', v: inspected ? visitor.device : 'WITHHELD · 需开档查看' },
     { k: 'SUBMITTED', v: visitor.submittedAt },
   ];
 
@@ -88,7 +88,7 @@ export function PassportZoom({ visitor, inspected, stamp, onStamp, onClose }: Pr
               {z === 1 ? 'ZOOM 1.6×' : 'FIT'}
             </button>
             <button type="button" className="tag dim" onClick={onClose}>
-              CLOSE
+              <span className="cn">关闭</span>
             </button>
           </span>
         </div>
@@ -180,7 +180,7 @@ export function PassportZoom({ visitor, inspected, stamp, onStamp, onClose }: Pr
 
         <div className="ppz-foot" data-no-zoom>
           <span className={`ppz-hint ${stamp ? 'on' : ''}`}>
-            {stamp ? 'STAMP APPLIED · 归档中…' : '按下印章即生效，无法撤回'}
+            {stamp ? '已盖章 · 归档中…' : '按下印章即生效，无法撤回'}
           </span>
           <div className="ppz-stamp-row">
             <button
@@ -189,7 +189,9 @@ export function PassportZoom({ visitor, inspected, stamp, onStamp, onClose }: Pr
               disabled={stamp !== null}
               onClick={() => onStamp('APPROVE')}
             >
-              STAMP · APPROVE
+              <span className="btn-main">
+                盖章放行<span className="bi-en">APPROVE</span>
+              </span>
               <small>GRANT ACCESS</small>
             </button>
             <button
@@ -198,7 +200,9 @@ export function PassportZoom({ visitor, inspected, stamp, onStamp, onClose }: Pr
               disabled={stamp !== null}
               onClick={() => onStamp('DENY')}
             >
-              STAMP · DENY
+              <span className="btn-main">
+                盖章拒绝<span className="bi-en">DENY</span>
+              </span>
               <small>REFUSE ENTRY</small>
             </button>
           </div>

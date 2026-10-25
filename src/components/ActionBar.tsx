@@ -18,11 +18,15 @@ export function ActionBar({ onMove, onInspect, inspected, disabled }: Props) {
           onClick={onInspect}
           disabled={disabled || inspected}
         >
-          INSPECT
-          <small>{inspected ? 'FILE OPEN' : `−¥${Math.abs(FUNDS_TABLE.inspect)}`}</small>
+          <span className="btn-main">
+            开档<span className="bi-en">INSPECT</span>
+          </span>
+          <small>{inspected ? 'FILE OPEN · 已开档' : `−¥${Math.abs(FUNDS_TABLE.inspect)}`}</small>
         </button>
         <button type="button" className="btn btn-deny" onClick={() => onMove('DENY')} disabled={disabled}>
-          DENY
+          <span className="btn-main">
+            拒绝<span className="bi-en">DENY</span>
+          </span>
           <small>REFUSE ENTRY</small>
         </button>
         <button
@@ -31,7 +35,9 @@ export function ActionBar({ onMove, onInspect, inspected, disabled }: Props) {
           onClick={() => onMove('APPROVE')}
           disabled={disabled}
         >
-          APPROVE
+          <span className="btn-main">
+            放行<span className="bi-en">APPROVE</span>
+          </span>
           <small>GRANT ACCESS</small>
         </button>
       </div>

@@ -2,6 +2,7 @@ import type { Visitor } from '../types/game';
 import { REGION_MAP, SERVICE_MAP } from '../data/regions';
 import { derivePassport } from '../data/passport';
 import { PixelAvatar } from './PixelAvatar';
+import { TIER_ZH, Zh } from '../i18n/zh';
 
 interface Props {
   visitor: Visitor;
@@ -45,9 +46,12 @@ export function PassportDoc({ visitor, inspected, onOpen }: Props) {
       <div className="panel-head">
         <span className="panel-title">CHECKPOINT · WINDOW 04</span>
         <span className="pp-head-tags">
-          <span className={`tag pp-tier ${TIER_TONE[visitor.tier]}`}>{TIER_LABEL[visitor.tier]}</span>
+          <span className={`tag pp-tier ${TIER_TONE[visitor.tier]}`}>
+            {TIER_LABEL[visitor.tier]}
+            <Zh>{TIER_ZH[visitor.tier]}</Zh>
+          </span>
           <button type="button" className="tag cyan pp-open" onClick={onOpen}>
-            PASSPORT ▸
+            <span className="cn">护照</span> PASSPORT ▸
           </button>
         </span>
       </div>
@@ -75,40 +79,50 @@ export function PassportDoc({ visitor, inspected, onOpen }: Props) {
 
         <div className="pp-grid">
           <div className="pp-cell">
-            <span className="pp-k">IP REGION</span>
+            <span className="pp-k">
+              IP REGION<Zh>地区</Zh>
+            </span>
             <span className="pp-v">{ip.code}</span>
             <span className="pp-sub">{ip.name}</span>
           </div>
           <div className="pp-cell">
-            <span className="pp-k">TIMEZONE</span>
+            <span className="pp-k">
+              TIMEZONE<Zh>时区</Zh>
+            </span>
             <span className="pp-v mono-num">{visitor.timezone}</span>
             <span className="pp-sub">per R02</span>
           </div>
           <div className="pp-cell">
-            <span className="pp-k">ACCOUNT REGION</span>
+            <span className="pp-k">
+              ACCOUNT REGION<Zh>账号</Zh>
+            </span>
             <span className="pp-v">{account.code}</span>
             <span className="pp-sub">{account.name}</span>
           </div>
           <div className="pp-cell">
-            <span className="pp-k">LANGUAGE</span>
+            <span className="pp-k">
+              LANGUAGE<Zh>语言</Zh>
+            </span>
             <span className="pp-v mono-num">{visitor.language}</span>
             <span className="pp-sub">per R04</span>
           </div>
         </div>
 
         <div className="pp-reason">
-          <span className="pp-k">DECLARED REASON</span>
+          <span className="pp-k">
+            DECLARED REASON<Zh>申报理由</Zh>
+          </span>
           <span className="pp-reason-text">{visitor.reason}</span>
         </div>
 
         <button type="button" className="pp-slots" onClick={onOpen} aria-label="查看护照详情">
           <span className="pp-slot">
             <span className="pp-slot-word">APPROVE</span>
-            <span className="pp-slot-state">NOT STAMPED</span>
+            <span className="pp-slot-state">未盖章</span>
           </span>
           <span className="pp-slot deny">
             <span className="pp-slot-word">DENY</span>
-            <span className="pp-slot-state">NOT STAMPED</span>
+            <span className="pp-slot-state">未盖章</span>
           </span>
         </button>
 
@@ -117,7 +131,10 @@ export function PassportDoc({ visitor, inspected, onOpen }: Props) {
         </div>
 
         <div className="pp-footline">
-          <span>{inspected ? 'DEEP FILE UNSEALED · DEVICE ON RECORD' : 'SURFACE LAYER · TAP PASSPORT TO ZOOM'}</span>
+          <span>
+            {inspected ? 'DEEP FILE UNSEALED' : 'SURFACE LAYER'}
+            <Zh>{inspected ? '深档已开封' : '点护照放大'}</Zh>
+          </span>
         </div>
       </div>
     </div>

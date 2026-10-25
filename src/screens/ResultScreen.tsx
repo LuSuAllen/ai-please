@@ -34,7 +34,10 @@ export function ResultScreen({ state, bestScore, onRestart, onHome }: Props) {
       <div className="stage-bleed" />
       <div className="result">
         <div className="result-head">
-          <div className="home-kicker">{run?.day ?? 'DAY'} · SHIFT REPORT</div>
+          <div className="home-kicker">
+            {run?.day ?? 'DAY'} · <span className="cn">班次报告</span>
+            <span className="bi-en">SHIFT REPORT</span>
+          </div>
           <div className={`result-grade ${grade.tone}`}>{grade.grade}</div>
           <div className="home-sub2" style={{ marginTop: 4 }}>
             最高分 {Math.max(bestScore, state.score)}
@@ -43,43 +46,51 @@ export function ResultScreen({ state, bestScore, onRestart, onHome }: Props) {
 
         <div className="result-grid">
           <div className="result-cell">
-            <span className="k">CORRECT · 判定正确</span>
+            <span className="k">判定正确</span>
             <span className="v pos">
               {correct}/{total}
             </span>
           </div>
           <div className="result-cell">
-            <span className="k">WRONG · 判定错误</span>
+            <span className="k">判定错误</span>
             <span className={`v ${wrong > 0 ? 'neg' : ''}`}>{wrong}</span>
           </div>
           <div className="result-cell">
-            <span className="k">INSPECT · 开档次数</span>
+            <span className="k">开档次数</span>
             <span className="v">{state.inspectedCount}</span>
           </div>
           <div className="result-cell">
-            <span className="k">误放行 · WRONG APPROVE</span>
+            <span className="k">误放行</span>
             <span className={`v ${wrongApprove > 0 ? 'neg' : ''}`}>{wrongApprove}</span>
           </div>
           <div className="result-cell">
-            <span className="k">误拒绝 · WRONG DENY</span>
+            <span className="k">误拒绝</span>
             <span className={`v ${wrongDeny > 0 ? 'neg' : ''}`}>{wrongDeny}</span>
           </div>
           <div className="result-cell conclusion">
-            <span className="k">FINAL SCORE · 总分</span>
+            <span className="k">总分</span>
             <span className={`v ${state.score > 0 ? 'pos' : state.score < 0 ? 'neg' : ''}`}>
               {state.score}
             </span>
           </div>
           <div className="result-cell conclusion">
-            <span className="k">FINAL FUNDS · 预算结余</span>
+            <span className="k">预算结余</span>
             <span className="v">¥{state.funds}</span>
+            {state.inspectedCount > 0 ? (
+              <span className="bi-line">开档支出 −¥{state.inspectedCount * 25}</span>
+            ) : null}
           </div>
         </div>
 
         <div className="panel">
           <div className="panel-head">
-            <span className="panel-title">FINAL VERDICT · {state.mode ?? 'NONE'}</span>
-            <span className="tag cyan">ARCHIVE</span>
+            <span className="panel-title">
+              <span className="cn">最终裁定</span>
+              <span className="bi-en">FINAL VERDICT</span>
+            </span>
+            <span className="tag cyan">
+              <span className="cn">归档</span>
+            </span>
           </div>
           <div className="panel-body">
             <div className="vb-text" style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em' }}>
@@ -93,7 +104,10 @@ export function ResultScreen({ state, bestScore, onRestart, onHome }: Props) {
 
         <div className="panel">
           <div className="panel-head">
-            <span className="panel-title">AUDIT LOG · 审核流水</span>
+            <span className="panel-title">
+              <span className="cn">审核流水</span>
+              <span className="bi-en">AUDIT LOG</span>
+            </span>
           </div>
           <div className="panel-body">
             <div className="log">
@@ -118,10 +132,14 @@ export function ResultScreen({ state, bestScore, onRestart, onHome }: Props) {
 
         <div className="home-buttons">
           <button type="button" className="btn btn-wide btn-approve" onClick={onRestart}>
-            PLAY AGAIN
+            <span className="btn-main">
+              再玩一次<span className="bi-en">PLAY AGAIN</span>
+            </span>
           </button>
           <button type="button" className="btn btn-wide btn-ghost" onClick={onHome}>
-            BACK TO MENU
+            <span className="btn-main">
+              返回主菜单<span className="bi-en">BACK TO MENU</span>
+            </span>
           </button>
         </div>
       </div>

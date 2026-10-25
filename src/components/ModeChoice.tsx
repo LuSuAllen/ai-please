@@ -43,13 +43,19 @@ export function ModeChoice({ day, conflictCode, onChoose }: Props) {
 
           <div className="mode-grid" style={{ marginTop: 14 }}>
             <button type="button" className="mode-card strict" onClick={() => onChoose('STRICT')}>
-              <div className="mc-title">STRICT MODE</div>
+              <div className="mc-title">
+                <span className="cn">条文模式</span>
+                <span className="bi-en">STRICT MODE</span>
+              </div>
               <div className="mc-desc">
                 条文即秩序。名单之外一律不放，可审计，也可能挡掉本该通过的人。
               </div>
             </button>
             <button type="button" className="mode-card human" onClick={() => onChoose('HUMAN')}>
-              <div className="mc-title">HUMAN MODE</div>
+              <div className="mc-title">
+                <span className="cn">人情模式</span>
+                <span className="bi-en">HUMAN MODE</span>
+              </div>
               <div className="mc-desc">
                 先读人，再读条文。承认规则会出错，并为判断负责。
               </div>

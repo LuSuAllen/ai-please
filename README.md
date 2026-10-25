@@ -33,12 +33,12 @@ const preactAlias = [
 ];
 ```
 
-等价性不是"应该没问题"，是量过的：**冻结区 D01–D03 的 72 组生成快照哈希不变** `6ea6656d4ab9ad0e`（新关单独汇总，不污染旧哈希）、**56 单测全过**、**19 场景 / 339 断言全过**、**6 个关键界面与 React 产物逐像素一致（0 像素差异）**。`react` / `react-dom` 仍留在 `dependencies` 里只作类型来源，不参与打包。
+等价性不是"应该没问题"，是量过的：**冻结区 D01–D03 的 72 组生成快照哈希不变** `6ea6656d4ab9ad0e`（新关单独汇总，不污染旧哈希）、**61 单测全过**、**20 场景 / 419 断言全过**、**6 个关键界面与 React 产物逐像素一致（0 像素差异）**。`react` / `react-dom` 仍留在 `dependencies` 里只作类型来源，不参与打包。
 
 ## 门禁与验收
 
 ```bash
-npm test               # 12 个套件：生成器 / 规则求值 / 存档 / 不变量 / 性能 / 关卡配方
+npm test               # 13 个套件：生成器 / 规则求值 / 存档 / 不变量 / 性能 / 关卡配方 / 双语术语
 npm run stress         # 10000 局全部过不变量校验（含 oracle 复算）
 npm run verify:budget  # 首屏 JS ≤70kB、首屏 CSS ≤6.2kB、全部 JS ≤74kB、总产物 ≤260kB
 npm run verify:local   # build + budget + test 一条龙
@@ -49,8 +49,19 @@ npm run verify:local   # build + budget + test 一条龙
 ```bash
 npm run build
 npm run serve:dist          # http://127.0.0.1:4175/ai-please/
-npm run verify:acceptance   # 19 场景 / 339 断言，证据写到 /tmp/ai-please-acceptance
+npm run verify:acceptance   # 20 场景 / 419 断言，证据写到 /tmp/ai-please-acceptance
+npm run verify:zh           # 双语注释探针：320/390 两档，中文副注折行=0、溢出=0、横向滚动=0
 ```
+
+界面文案分三层，改之前先判断在哪一层：
+
+| 层 | 例子 | 规则 |
+| --- | --- | --- |
+| 机器锚点 | `NEXT VISITOR` / `RESUME` / `START GAME` / `SCORING TABLE` | 英文必须是 DOM 可见 `innerText`，`verify-v3.mjs` 的 `clickText` / `includes` / 负断言都靠它；**不许** `display:none`、`sr-only` 或条件渲染 |
+| 领域标签 | `ACCOUNT REGION · 账号`、`R01 OPEN ZONE · 开放区` | 英文主标 + 中文副注（`.bi-zh` 9px / `.bi-line` 双行），英文一个字母都不能少 |
+| 操作与状态 | `判定正确`、`关闭`、`未解锁`、`未盖章`、`班次报告` | 中文为主（`.cn`，必须 `letter-spacing:0`），英文降为 7px 副标或直接省略 |
+
+中文只允许放在视图层 `src/i18n/terms.ts`（数据层被快照哈希、I6 禁词、20KB 存档三道门禁锁着）。新增规则不配中文会被 `tests/i18n-terms.test.ts` 判红；新增英文锚点却删了中文，会被 `verify:acceptance` 的 `bilingual-controls-keep-both-layers` 场景判红。
 
 调试某一局：`http://127.0.0.1:5173/?day=D03&seed=20261024`。URL 带种子时只在**没有可续玩进度**的情况下自动开局——刷新不会吞掉存档。
 

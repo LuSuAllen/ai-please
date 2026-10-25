@@ -84,7 +84,8 @@ npm run verify:zh           # 双语注释探针：320/390 两档，中文副注
 
 分支流程见 [docs/GIT_WORKFLOW.md](docs/GIT_WORKFLOW.md)（`feat/*` → PR → `verify:all` 绿 → 合并 `main` → 自动发布）。
 
-本机 `/usr/local/bin/git` 架构不匹配（会报 `Bad CPU type in executable`），统一用 Xcode 自带的 git，并且不写入全局 config：
+本机 `/usr/local/bin/git` 架构不匹配（会报 `Bad CPU type in executable`），统一用 Xcode 自带的 git，并且不写入全局 git config。
+`github.com:443` 不通，仓库已把 `origin` 指到 `git@github-ai-please:LuSuAllen/ai-please.git`（`~/.ssh/config` 里走 `ssh.github.com:443` + `~/.ssh/ai_please_deploy`），所以 `git fetch/push` 直接可用：
 
 ```bash
 GIT=/Applications/Xcode.app/Contents/Developer/usr/bin/git

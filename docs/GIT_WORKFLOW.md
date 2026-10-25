@@ -79,9 +79,28 @@ npm run verify:all
 
 ## 7. 本机环境注意（这台机器）
 
-- 可用的 git 是 `/Applications/Xcode.app/Contents/Developer/usr/bin/git`；`/usr/local/bin/git` 是 x86_64，会报 `Bad CPU type in executable`，`/usr/bin/git` 会撞 Xcode license。
-- `github.com:443` 在本机网络下不可达（`api.github.com` 可达）。`git push` 会超时；兜底路径：用 Git Data API 推分支（blob → tree → commit → `PATCH /refs/heads/<branch>`，`force:false` + 父提交校验），推送后本地用 `git fetch`/`update-ref` 对齐。脚本见 `/tmp/push-api.mjs`（不含凭据，token 从钥匙串取、用完即清）。
-- 这条兜底路径只用于「推分支」；合并 main 走 PR + API merge，不硬推。
+- 可用的 git：`/Applications/Xcode.app/Contents/Developer/usr/bin/git`。`/usr/local/bin/git` 是 x86_64（`Bad CPU type in executable`），`/usr/bin/git` 撞 Xcode license。
+- `github.com:443` 在本机网络下不可达（TCP/TLS 全超时），但 **`ssh.github.com:443` 可达**，仓库已按这条路配好：
+
+  ```sshconfig
+  # ~/.ssh/config
+  Host github-ai-please
+      HostName ssh.github.com
+      Port 443
+      User git
+      IdentityFile ~/.ssh/ai_please_deploy
+      IdentitiesOnly yes
+  ```
+
+  ```bash
+  git remote -v
+  # origin git@github-ai-please:LuSuAllen/ai-please.git (fetch/push)
+  ```
+
+  对应仓库 deploy key：「ai-please feat workflow (ssh 443 push)」，可写、仅此仓库。改名/换机时重新登记即可。
+
+- 因此 `git fetch` / `git push` 直接可用，**不需要**额外环境变量。
+- 备用路径（网络再次变化时）：Git Data API 推分支 —— blob → tree → commit → `PATCH /refs/heads/<branch>`（`force:false` + 父提交校验），脚本 `/tmp/push-api.mjs`，不含凭据。
 
 ## 8. 首次落地（本次）
 

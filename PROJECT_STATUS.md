@@ -1050,3 +1050,41 @@ npm run verify:all     # 本地合并门禁（实测约 24 秒：build 1.9 / 单
 | `未盖章` 不占第三行 | 与主标同框的第二行 8px | 三行要 39.5px，超过内容盒 30px；状态语义由虚线 + 低对比 + `aria-label` 承载 |
 | 拒绝侧不再泛红 | 占位态统一灰蓝 | 原 `#45272f` 描边对底色只有 1.41:1，等于看不见；红色留给「已拒绝」这个真正的警示状态 |
 | 整块仍是单个按钮 | 两枚印章位共用一个 44px+ 命中区 | 拆成两个真按钮会让 tab stop +1 且两个按钮都做同一件事（打开护照），并多付 18px 高度 |
+
+## 22. 第十六轮：并排控件等高（护照头 chip ↔ 按钮 + 全站同类扫描）（2026-10-25）
+
+### 22.1 改了什么
+
+| 文件 | 内容 |
+| --- | --- |
+| `src/styles/global.css` | `.pp-tier{align-self:stretch;display:inline-flex;align-items:center}`（吃满 44px 行高）；`.pp-open` 改 `inline-flex` 居中（原来文字比盒中心高 13.2px）；`.sheet-foot .btn,.home-buttons .btn{min-height:46px}`；`.result-cell` 改 flex 纵向居中；`.day-pick .day-chip{min-height:44px}` |
+| `src/components/PassportDoc.tsx` | 护照按钮文案 `护照` + `<span class="bi-en">PASSPORT</span> ▸`——`inline-flex` 会吞掉裸文本间的空白，英文必须包进 `.bi-en` 才能吃到 `.cn + .bi-en` 的 6px 间隙 |
+| `scripts/verify-v3.mjs` | 新增 3 条断言：同行同类控件等高 ≤1px、顶边对齐 ≤1px、文字垂直居中 ≤2px |
+| `docs/row-height-audit.md` | 三档实测审计表 + 判定规则 + 不收的方案（`line-height:38px` 硬编码、把 a11y 44 降到 40） |
+| `scripts/probe-zh.mjs` | 未改；本轮 22 个场景 `docOverflow=0 / docOverflowY=0` |
+
+### 22.2 实测（三档，`getBoundingClientRect`）
+
+| 位置 | 改前 Δ | 改后 Δ | 纵向代价 |
+| --- | --- | --- | --- |
+| 护照头 `.pp-tier` vs `.pp-open` | 29.61 / 27.20 / 27.20 | **0 / 0 / 0**（均 44.00） | 0（`panel-head` 仍 55，`main.scrollHeight` 不变） |
+| 教程底行 跳过说明 vs 下一步 | 3.00 | **0** | 弹层 +3px，不占主屏 |
+| 首页/结算 `.home-buttons` 主 vs 次 | 6.00 | **0**（均 46） | 首页仍不滚（320 内容 568 恰好装下） |
+| 结算格行内基线 | 2.00 | **1.27**（≤2px） | 0（grid 总高 222.09 不变） |
+| 结算格跨行 47.75 vs 54.30 | 6.55 | 不改 | 结论行提级是有意设计 |
+| 状态栏三格 / 动作栏三键 / 印章两排 / 护照层 actions | 0 | 0 | PASS，未动 |
+
+### 22.3 两位专家的分歧与裁定
+
+- **UI 设计师**：把 chip 拉满到 44（`align-self:stretch`），视觉框等高、命中区不动，+20B，主屏零增量。
+- **用户体验设计师**：两边都应降到 **24px 视觉框 + 44px 命中区**（`::after` 外扩），理由是「8px 字住在 44px 盒里，78% 是空腔」。
+- **本轮采纳 UI 设计师方案**：24px 视觉框会让 `.pp-open` 外框 <40px，直接踩坏 `verify-v3` 的 `touch-target-min-40`（断言的正是外框高度），要改就得把触控断言整体换成 `elementFromPoint` 命中测试——这是验收口径变更，需要单独一轮并签字，不在本次视觉打磨里顺手做。
+- **两侧共识已落地的判据**（写进 `docs/row-height-audit.md`）：同级并排控件 Δ≤1px；文字居中偏差 ≤2px；跨层级（文本 vs 控件）只要求对齐轴、不要求等高；主 CTA 与次 CTA 的高度差是信息不是缺陷；装饰/图像/小签不参与比较。
+
+### 22.4 已知取舍与未做
+
+| 项 | 状态 | 原因 |
+| --- | --- | --- |
+| `.pp-open` / 抽屉关闭 / 放大层按钮降到 24px 视觉 + 44px 命中 | 未做 | 需把 `touch-target-min-40` 改成命中区断言，属验收口径变更 |
+| 跨屏按钮高漂移（`.btn` 52 / `.btn-wide` 46 / `.btn-ghost` 40→46） | 部分收敛 | 本轮只收敛「同一行/同一列表」，跨屏 token 收敛另立一轮 |
+| 删 `.pp-open`（同义入口 3→1） | 未做 | 沿用第十五轮结论，仍需同步改 `querySelectorAll` 断言 |

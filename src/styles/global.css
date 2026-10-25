@@ -1251,6 +1251,9 @@ button {
 }
 
 .pp-open {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: #0d1a2b;
   cursor: pointer;
   font-family: inherit;
@@ -1975,4 +1978,33 @@ a:focus-visible,
 .sheet-foot .btn-wide {
   flex: 1 1 100%;
   width: 100%;
+}
+
+/* 并排控件等高（S6 行高审计）：同一 flex 行内的相邻控件必须同高。
+   .pp-tier 原本是 14.4/15.6 的纯文本 chip，被旁边 44px 的 .pp-open 衬成「矮一截」；
+   align-self:stretch 让它在 44px 的 header 行里长满，主屏纵向零增量（head 仍 55），
+   文字仍由 flex 居中，不依赖魔法行高。 */
+.pp-tier {
+  align-self: stretch;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* 弹层/首页按钮行：.btn-wide 46 + .btn-ghost 40 并排会差 6px，统一到 46（与 .btn-wide 同基准） */
+.sheet-foot .btn,
+.home-buttons .btn {
+  min-height: 46px;
+}
+
+/* 关卡 chip 41px 贴着触控下限，抬到 44 与全站同基准（首页仍有余量，实测无溢出） */
+.day-pick .day-chip {
+  min-height: 44px;
+}
+
+/* 结算格：行高由「结论行」撑开时，普通格的内容被拉成顶部对齐，与同行的 .conclusion 错位 2px；
+   flex 居中让被拉伸的格子在自身盒内垂直居中（不改任何盒子高度） */
+.result-cell {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }

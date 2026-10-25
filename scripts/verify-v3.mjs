@@ -555,6 +555,15 @@ try {
     await clickText('START GAME');
     await wait(`document.querySelector('.actionbar')`, 'touch targets in game');
     for (const t of await measure(['.actionbar .btn', '.pp-open', '.pp-portrait', '.pp-slots'])) assert(t.h >= 40, `游戏内触控目标 ≥40：${t.sel}`, t);
+    // 护照头：等级 chip 与护照按钮等高、顶边对齐（同行同类控件高度一致，容差 1px）
+    const headPair = await current.eval(`(() => { const a = document.querySelector('.pp-tier'); const b = document.querySelector('.pp-open'); if (!a || !b) return null; const ra = a.getBoundingClientRect(); const rb = b.getBoundingClientRect(); return { tier: Math.round(ra.height * 10) / 10, open: Math.round(rb.height * 10) / 10, dy: Math.round((ra.top - rb.top) * 10) / 10 }; })()`);
+    assert(headPair && Math.abs(headPair.tier - headPair.open) <= 1, '护照头 chip 与按钮等高（≤1px）', headPair);
+    assert(headPair && Math.abs(headPair.dy) <= 1, '护照头两个控件顶边对齐（≤1px）', headPair);
+
+    // 文字在盒内垂直居中（≤2px）：高度拉平后最容易踩的坑是文字仍顶对齐
+    const openCentered = await current.eval(`(() => { const b = document.querySelector('.pp-open'); const t = b && b.querySelector('.cn'); if (!b || !t) return null; const rb = b.getBoundingClientRect(); const rt = t.getBoundingClientRect(); return { dy: Math.round(((rt.top + rt.height / 2) - (rb.top + rb.height / 2)) * 10) / 10 }; })()`);
+    assert(openCentered && Math.abs(openCentered.dy) <= 2, '护照按钮文字垂直居中（≤2px）', openCentered);
+
     // 护照封面印章位：上下两排，每排中文主标 + 英文副标
     const slots = await current.eval(`Array.from(document.querySelectorAll('.pp-slot')).map((e) => e.innerText.replace(/\\s+/g, ' ').trim())`);
     assert(slots.length === 2, '护照封面两枚印章位', slots);

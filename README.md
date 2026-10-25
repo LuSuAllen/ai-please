@@ -33,14 +33,14 @@ const preactAlias = [
 ];
 ```
 
-等价性不是"应该没问题"，是量过的：**冻结区 D01–D03 的 72 组生成快照哈希不变** `6ea6656d4ab9ad0e`（新关单独汇总，不污染旧哈希）、**61 单测全过**、**20 场景 / 428 断言全过**、**6 个关键界面与 React 产物逐像素一致（0 像素差异）**。`react` / `react-dom` 仍留在 `dependencies` 里只作类型来源，不参与打包。
+等价性不是"应该没问题"，是量过的：**冻结区 D01–D03 的 72 组生成快照哈希不变** `6ea6656d4ab9ad0e`（新关单独汇总，不污染旧哈希）、**61 单测全过**、**20 场景 / 431 断言全过**、**6 个关键界面与 React 产物逐像素一致（0 像素差异）**。`react` / `react-dom` 仍留在 `dependencies` 里只作类型来源，不参与打包。
 
 ## 门禁与验收
 
 合并前只需要一条命令，退出码 0 才允许进 `main`：
 
 ```bash
-npm run verify:all     # build → 单测 61 → 预算 → 验收 20 场景/428 断言 → 双语探针
+npm run verify:all     # build → 单测 61 → 预算 → 验收 20 场景/431 断言 → 双语探针
 ```
 
 单项（排查用）：
@@ -57,7 +57,7 @@ npm run verify:local   # build + budget + test 一条龙（不含端到端）
 ```bash
 npm run build
 npm run serve:dist          # http://127.0.0.1:4175/ai-please/
-npm run verify:acceptance   # 20 场景 / 428 断言，证据写到 /tmp/ai-please-acceptance
+npm run verify:acceptance   # 20 场景 / 431 断言，证据写到 /tmp/ai-please-acceptance
 npm run verify:zh           # 双语注释探针：320/390 两档，中文副注折行=0、溢出=0、横向滚动=0
 ```
 

@@ -37,11 +37,19 @@ const preactAlias = [
 
 ## 门禁与验收
 
+合并前只需要一条命令，退出码 0 才允许进 `main`：
+
+```bash
+npm run verify:all     # build → 单测 61 → 预算 → 验收 20 场景/419 断言 → 双语探针
+```
+
+单项（排查用）：
+
 ```bash
 npm test               # 13 个套件：生成器 / 规则求值 / 存档 / 不变量 / 性能 / 关卡配方 / 双语术语
 npm run stress         # 10000 局全部过不变量校验（含 oracle 复算）
 npm run verify:budget  # 首屏 JS ≤70kB、首屏 CSS ≤6.2kB、全部 JS ≤74kB、总产物 ≤260kB
-npm run verify:local   # build + budget + test 一条龙
+npm run verify:local   # build + budget + test 一条龙（不含端到端）
 ```
 
 端到端验收**不要用 `vite preview`**（它会把 `/ai-please/assets/*.js` 回退成 index.html，得到假失败）。用 Pages 等价静态服务：
@@ -65,12 +73,16 @@ npm run verify:zh           # 双语注释探针：320/390 两档，中文副注
 
 调试某一局：`http://127.0.0.1:5173/?day=D03&seed=20261024`。URL 带种子时只在**没有可续玩进度**的情况下自动开局——刷新不会吞掉存档。
 
-## 部署
+## 分支与部署
 
-推 `main` 即触发 `.github/workflows/deploy.yml`：`npm ci` → `npm test` → 构建 → `verify:budget` → 上传 Pages 产物 → 发布。
+`main` 只接受 PR：开发在 `feat/*`（修复 `fix/*`，工程 `chore/*`），PR 上 CI 跑 `verify:all`，绿了再合并。
+细则见 [docs/GIT_WORKFLOW.md](docs/GIT_WORKFLOW.md)；合并进 `main` 即触发 `.github/workflows/deploy.yml`：
+`npm ci` → `npm test` → 构建 → `verify:budget` → 上传 Pages 产物 → 发布。
 生产构建 base 为 `/ai-please/`，本地 dev 为 `/`（见 `vite.config.ts`）。
 
 ## 版本控制约定
+
+分支流程见 [docs/GIT_WORKFLOW.md](docs/GIT_WORKFLOW.md)（`feat/*` → PR → `verify:all` 绿 → 合并 `main` → 自动发布）。
 
 本机 `/usr/local/bin/git` 架构不匹配（会报 `Bad CPU type in executable`），统一用 Xcode 自带的 git，并且不写入全局 config：
 
@@ -78,7 +90,8 @@ npm run verify:zh           # 双语注释探针：320/390 两档，中文副注
 GIT=/Applications/Xcode.app/Contents/Developer/usr/bin/git
 $GIT add -A
 $GIT -c user.name="Allen Huang" -c user.email="allen.huang@ui.com" commit -m "..."
-$GIT push origin main
+$GIT switch -c feat/<slug>          # 从最新 main 开分支，不直接提交 main
+$GIT push -u origin feat/<slug>     # 走 PR 合并，细节见 docs/GIT_WORKFLOW.md
 ```
 
 `.mts` / `.ts` 脚本与测试都走 Node 的类型擦除，命令行需带 `--experimental-strip-types`（`npm test` / `npm run stress` 已内置）。

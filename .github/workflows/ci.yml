@@ -1,0 +1,41 @@
+name: CI
+
+# 只跑 PR：main 上的构建/发布由 deploy.yml 负责，避免同一次 push 跑两遍。
+# 分支保护要求这个 job 绿了才允许合并（见 docs/GIT_WORKFLOW.md）。
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gates:
+    name: verify:all
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # 一条命令跑完：构建 → 单测 → 预算 → 验收 20 场景/419 断言 → 双语探针
+      # 验收脚本自己起 headless Chrome（--no-sandbox 已在脚本里），runner 自带 google-chrome
+      - run: npm run verify:all
+      - name: 上传失败证据
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gates-evidence
+          path: |
+            /tmp/ai-please-acceptance
+            /tmp/ai-please-zh-probe
+          if-no-files-found: ignore
+          retention-days: 7

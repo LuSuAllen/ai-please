@@ -51,7 +51,8 @@ export function PassportDoc({ visitor, inspected, onOpen }: Props) {
             <Zh>{TIER_ZH[visitor.tier]}</Zh>
           </span>
           <button type="button" className="tag cyan pp-open" onClick={onOpen}>
-            <span className="cn">护照</span> PASSPORT ▸
+            <span className="cn">护照</span>
+            <span className="bi-en">PASSPORT</span> ▸
           </button>
         </span>
       </div>

@@ -243,12 +243,13 @@ try {
   chrome.on('error', (e) => { spawnError = e; });
   chrome.stderr.on('data', (data) => { chromeLog = (chromeLog + data.toString()).slice(-4000); });
   let ready = false;
-  for (let i = 0; i < 100; i++) {
+  // CI runner 冷启动可能 >10s，给到 30s；失败时连退出码一起报，别只给空字符串
+  for (let i = 0; i < 300; i++) {
     if (spawnError) throw spawnError;
     try { const r = await fetch(`${endpoint}/json/version`); if (r.ok) { report.browser = await r.json(); ready = true; break; } } catch {}
     await sleep(100);
   }
-  if (!ready) throw new Error(`Chrome CDP unavailable: ${chromeLog}`);
+  if (!ready) throw new Error(`Chrome CDP unavailable (exit=${chrome.exitCode}): ${chromeLog}`);
 
   // D01/D02/D03 的三局由 node 侧现算，UI 只负责呈现与记录
   const day1 = fixtureRun('D01');

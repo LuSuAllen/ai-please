@@ -164,7 +164,7 @@ try {
   chrome = spawn(chromePath, ['--headless=new', '--no-sandbox', '--disable-gpu', '--no-first-run',
     '--no-default-browser-check', `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, 'about:blank'],
   { stdio: ['ignore', 'ignore', 'pipe'] });
-  for (let i = 0; i < 100; i += 1) {
+  for (let i = 0; i < 300; i += 1) {
     try { await fetch(`http://127.0.0.1:${port}/json/version`); break; } catch { await sleep(100); }
   }
 

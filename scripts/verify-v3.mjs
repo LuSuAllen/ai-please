@@ -436,6 +436,15 @@ try {
     await page({ meta: { unlockedDay: 'D01' } });
     await wait(`document.querySelector('.home-buttons')`, 'home');
     await clickText('VIEW HOW TO PLAY');
+    const tutHead = await current.eval(`document.querySelector('.sheet-head')?.innerText ?? ''`);
+    assert(/玩法说明/.test(tutHead) && /HOW TO PLAY/.test(tutHead), '玩法说明标题中英并存', tutHead);
+    const tutName = await current.eval(`document.querySelector('.rule-name')?.innerText ?? ''`);
+    assert(/读申请/.test(tutName), '玩法说明步骤名为中文', tutName);
+    const tutBody = await current.eval(`document.querySelector('.rule-body')?.innerText ?? ''`);
+    assert(/核对 IP 地区/.test(tutBody), '玩法说明正文为中文', tutBody);
+    const tutFoot = await current.eval(`document.querySelector('.sheet-foot')?.innerText ?? ''`);
+    assert(/跳过说明/.test(tutFoot) && /SKIP/.test(tutFoot), '教程按钮中英并存', tutFoot);
+    assert(/下一步/.test(tutFoot) && /NEXT/.test(tutFoot), '教程主按钮中英并存', tutFoot);
     await modalFocus('[role="dialog"]', '[data-v3-probe="1"]');
     await clickText('START GAME');
     await wait(`document.querySelector('.actionbar')`, 'game start for drawer');

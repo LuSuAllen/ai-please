@@ -939,7 +939,7 @@ npm run verify:zh            # = scripts/probe-zh.mjs，同样依赖 4175 上的
 | `npm run build` | `tsc --noEmit` 0 error；产物 `index-CKvgGFRk.js` + `index-CTIu0TO9.css` |
 | `npm test` | **61 通过 / 0 失败** |
 | `npm run verify:budget` | 首屏 JS 33.50 / 70kB（47.9%）、**首屏 CSS 5.79 / 6.2kB（93.4%）**、总产物 126.19 / 260kB（48.5%） |
-| `npm run verify:acceptance` | `PASS: 20/20 scenarios; 419 assertions`（上一轮 19/339） |
+| `npm run verify:acceptance` | `PASS: 20/20 scenarios; 424 assertions`（上一轮 19/339） |
 | `npm run verify:zh` | `bad=[]`、`spans=267`、`wrongVerdictSeen=true`、`docOverflow=0`、`docOverflowY=0`（320/390 两档 10 个状态 + 判错反馈） |
 | 数据层隔离 | `src/data` / `src/game` / `src/types` 零改动；快照哈希仍 `6ea6656d4ab9ad0e` |
 
@@ -987,10 +987,35 @@ npm run verify:acceptance && npm run verify:zh
 | --- | --- | --- |
 | 不设 `develop` 分支 | 只有 `main` + 短分支 | 单人/小团队下长期分支只带来漂移与合并成本；发布由 `deploy.yml` 在 main 上完成 |
 | PR 审批数 | 0（自审留痕） | 单仓库单人维护；门禁由 CI 承担，人工审批不产生额外信息 |
-| 本机推送 | `github.com:443` 不可达，`git push` 会超时 | 兜底走 Git Data API 推分支；合并仍走 PR + API merge，不硬推 main |
+| 本机推送 | `github.com:443` 不可达；改走 `ssh.github.com:443` + 仓库 deploy key + `~/.ssh/config` 别名 `github-ai-please` | 标准 `git fetch/push` 可用；Git Data API 仅作网络再变时的兜底 |
 
 ### 19.4 复现
 
 ```bash
-npm run verify:all     # 本地合并门禁（约 3–4 分钟）
+npm run verify:all     # 本地合并门禁（实测约 24 秒：build 1.9 / 单元 1.0 / 预算 0.3 / 验收 13.6 / 双语探针 7.6）
 ```
+
+## 20. 第十四轮：玩法说明与规则抽屉汉化（2026-10-25）
+
+### 20.1 改了什么
+
+| 文件 | 内容 |
+| --- | --- |
+| `src/components/TutorialSheet.tsx` | 头部改为「玩法说明 HOW TO PLAY」；三步正文改成「中文按钮名 + 英文括注」：`今日规则`（RULES OF THE DAY）、`开档` INSPECT、`放行` APPROVE、`拒绝` DENY；底部按钮补英文副标：跳过说明 SKIP / 上一步 BACK / 下一步 NEXT ▸（`返回首页 / 返回审核` 保持原样） |
+| `src/components/RuleDrawer.tsx` | 开放区注册表状态列 `OPEN/CLOSED` → `开放/关闭`（表头早已是中文，脚注保留 `OPEN 开放、CLOSED 关闭` 对照） |
+| `src/styles/global.css` | `.sheet-foot` 改 flex 布局：次要按钮并排一行、主按钮独占整行（此前三个按钮逐个占一行，320 上白吃两行高度） |
+| `scripts/probe-zh.mjs` | 新增玩法说明第 1/3 步与注册表下半屏的截图与度量；输出目录每次先清空（此前多轮运行会残留旧图，证据目录不可信）；场景覆盖 8 → 11 个 |
+
+### 20.2 门禁
+
+- `npm run verify:all` 全绿；`npm test` 61/61；首屏 CSS 5.80/6.2kB（93.6%）、首屏 JS 33.57/70kB、总产物 126.59/260kB
+- 验收 20 场景 / **424 断言**（新增 5 条锁住本轮的汉化：教程标题中英并存、步骤名与正文中文、跳过/下一步按钮中英并存）
+- `verify:zh`：`bad=[]`、`spans=347`（含教程/注册表新增元素）、320 与 390 均 `docOverflow=0 / docOverflowY=0`
+
+### 20.3 已知取舍
+
+| 项 | 现状 | 原因 |
+| --- | --- | --- |
+| 教程底部按钮英文副标 | 仅 `SKIP / BACK / NEXT`，`返回首页 ▸` 无英文 | `.sheet-foot` 一行放不下第三条副标；`返回` 语义已由中文与箭头表达 |
+| 注册表状态列 | 只显示 `开放 / 关闭` | 列宽 60px，再加英文会换行；脚注保留英中对照 |
+| 手册页 `HOW TO PLAY` | 只作头部副标，不再写「· 三步上手」 | 步数已由右上角 `01 / 03` 表达，避免重复 |

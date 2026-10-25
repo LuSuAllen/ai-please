@@ -6,7 +6,7 @@
  *   1) tsc --noEmit + vite build + postbuild   （构建）
  *   2) 单测 61 条                              （数据层不变量）
  *   3) 预算门禁                                （首屏 JS/CSS、总产物）
- *   4) 起 dist 静态服务器 → 验收 20 场景 419 断言
+ *   4) 起 dist 静态服务器 → 验收 20 场景 424 断言
  *   5) 双语探针（320/390，折行/溢出/遮挡）
  *
  * Usage: node scripts/verify-all.mjs [--skip-build] [--port 4175]
@@ -97,7 +97,7 @@ if (!(await waitForPort(PORT))) {
 }
 
 try {
-  if ((await step('acceptance（20 场景 / 419 断言）', 'node', ['--experimental-strip-types', 'scripts/verify-v3.mjs', '--url', BASE, '--out', '/tmp/ai-please-acceptance'])) !== 0) {
+  if ((await step('acceptance（20 场景 / 424 断言）', 'node', ['--experimental-strip-types', 'scripts/verify-v3.mjs', '--url', BASE, '--out', '/tmp/ai-please-acceptance'])) !== 0) {
     await failed();
   }
   if ((await step('zh probe（320/390 双语排版）', 'node', ['--experimental-strip-types', 'scripts/probe-zh.mjs', '--url', BASE, '--out', '/tmp/ai-please-zh-probe'])) !== 0) {

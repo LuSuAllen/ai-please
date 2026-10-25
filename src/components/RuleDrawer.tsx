@@ -107,7 +107,7 @@ export function RuleDrawer({ run, index, onClose }: DrawerProps) {
                       <td>{r.timezone}</td>
                       <td>{r.language}</td>
                       <td style={{ color: zoneOpen ? 'var(--green)' : 'var(--red)' }}>
-                        {zoneOpen ? 'OPEN' : 'CLOSED'}
+                        {zoneOpen ? '开放' : '关闭'}
                         {justClosed ? ' ↓' : ''}
                         {justOpened ? ' ↑' : ''}
                       </td>

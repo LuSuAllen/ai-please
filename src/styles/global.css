@@ -1949,3 +1949,21 @@ a:focus-visible,
 .cn + .bi-en {
   margin-left: 6px;
 }
+/* 弹层底部按钮：一行排开，主按钮吃掉剩余宽度（此前逐个换行，窄屏浪费三行） */
+.sheet-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.sheet-foot .btn {
+  flex: 0 0 auto;
+  width: auto;
+}
+
+/* 主按钮独占一行，次要按钮并排在上面一行 */
+.sheet-foot .btn-wide {
+  flex: 1 1 100%;
+  width: 100%;
+}

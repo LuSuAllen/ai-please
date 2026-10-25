@@ -18,7 +18,11 @@ const opts = {};
 for (let i = 0; i < argv.length; i += 2) opts[argv[i].slice(2)] = argv[i + 1];
 const url = new URL(opts.url || 'http://127.0.0.1:4175/ai-please/');
 const out = path.resolve(opts.out || '/tmp/ai-please-zh-probe');
-const chromePath = opts.chrome || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const chromePath =
+  opts.chrome ||
+  (process.platform === 'darwin'
+    ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+    : process.env.CHROME_PATH || 'google-chrome');
 const META_KEY = 'ai-please:meta:v3';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 

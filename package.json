@@ -13,7 +13,8 @@
     "verify:acceptance": "node --experimental-strip-types scripts/verify-v3.mjs --url http://127.0.0.1:4175/ai-please/ --out /tmp/ai-please-acceptance",
     "verify:local": "npm run build && npm run verify:budget && npm test",
     "stress": "node --experimental-strip-types scripts/stress-invariants.mts 10000",
-    "verify:zh": "node --experimental-strip-types scripts/probe-zh.mjs --url http://127.0.0.1:4175/ai-please/ --out /tmp/ai-please-zh-probe"
+    "verify:zh": "node --experimental-strip-types scripts/probe-zh.mjs --url http://127.0.0.1:4175/ai-please/ --out /tmp/ai-please-zh-probe",
+    "verify:all": "node scripts/verify-all.mjs"
   },
   "dependencies": {
     "preact": "^10.29.8",

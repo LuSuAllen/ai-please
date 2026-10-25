@@ -961,3 +961,36 @@ npm run verify:acceptance && npm run verify:zh
 ```
 
 证据图：`docs/shots/39-round12-home-320.png`、`40-round12-game-320.png`（护照入口 `护照 PASSPORT ▸`）、`41-round12-drawer-320.png`、`42-round12-verdict-correct-320.png`、`43-round12-verdict-wrong-320.png`（误放行归因 + 账户前后值）、`44-round12-result-320.png`、`45-round12-game-390.png`。
+
+## 19. 第十三轮：feat 分支开发流程（2026-10-25）
+
+### 19.1 改了什么
+
+| 文件 | 内容 |
+| --- | --- |
+| `docs/GIT_WORKFLOW.md` | 新增流程文档：分支模型（trunk-based，不设 develop）、命名（`feat/` `fix/` `chore/` `docs/`）、Conventional Commits、合并门禁、PR 三段描述、Squash/`--no-ff` 选型、分支保护清单、回滚与热修、本机受限网络兜底 |
+| `scripts/verify-all.mjs` | 新增「一条命令跑完合并门禁」：build → 单测 → 预算 → 起 `dist` 静态服务 → 验收 20 场景 → 双语探针，按快慢排序先便宜地失败；退出码 0/1/2 区分通过/门禁红/编排错误 |
+| `package.json` | 新增 `npm run verify:all` |
+| `.github/workflows/ci.yml` | PR 到 `main` 时跑 `verify:all`（ubuntu + runner 自带 Chrome），失败上传 `/tmp` 证据；`deploy.yml` 仍只管 `main` push，避免同一 push 跑两遍 |
+| `scripts/probe-zh.mjs` | Chrome 路径跨平台：macOS 取默认安装路径，其他平台取 `CHROME_PATH` 或 `google-chrome`（CI 需要） |
+| `README.md` | 「门禁与验收」以 `verify:all` 为唯一合并门禁；「部署」改为「分支与部署」；版本控制段改为从 `main` 开 `feat/*` 走 PR |
+
+### 19.2 默认合并策略
+
+- 分支内一条有效提交（或过程提交无保留价值）→ **Squash and merge**，main 保持一条整洁提交；
+- 分支内多步可读历史（重构 / 行为 / 文档分开）→ **Merge commit（`--no-ff`）**；
+- 不用 Rebase and merge（等于换一个新对象上生产，CI 验过的不是它）。
+
+### 19.3 已知取舍
+
+| 项 | 现状 | 原因 |
+| --- | --- | --- |
+| 不设 `develop` 分支 | 只有 `main` + 短分支 | 单人/小团队下长期分支只带来漂移与合并成本；发布由 `deploy.yml` 在 main 上完成 |
+| PR 审批数 | 0（自审留痕） | 单仓库单人维护；门禁由 CI 承担，人工审批不产生额外信息 |
+| 本机推送 | `github.com:443` 不可达，`git push` 会超时 | 兜底走 Git Data API 推分支；合并仍走 PR + API merge，不硬推 main |
+
+### 19.4 复现
+
+```bash
+npm run verify:all     # 本地合并门禁（约 3–4 分钟）
+```

@@ -16,6 +16,7 @@ const preactAlias = [
 ];
 
 export default defineConfig(({ command }) => ({
+  define: { __RANK_DEBUG__: 'false' },
   base: command === 'build' ? '/ai-please/' : '/',
   plugins: [react()],
   resolve: { alias: preactAlias },

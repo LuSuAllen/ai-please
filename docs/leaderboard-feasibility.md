@@ -766,3 +766,22 @@ node ~/.dsh/skills/minitool-zip-builder/scripts/audit_artifact.mjs ai-please-min
 1. **授权是运行时开关，不是构建开关**。未勾选时卡片整块 `hidden`（1005/1006/10003/1004 一律降级），线上唯一可见差异是首页 footer 文案。因此预览能验「降级干净」，不能验「功能可用」；功能可用的唯一验证路径是真机 + 已勾授权。
 2. **0.1.0 没有字节级回滚资产**。在 worktree 用 c8beb1b 重建的 zip md5 为 `9449a07be81b15e65a930ba0c2490392`，与送审时的 `c4d23f10883a29c9353bac2e645b1434` 不一致（压缩时间戳/条目顺序），已存档到 `~/Downloads/ai-please-artifacts/ai-please-0.1.0-rebuilt-9449a07b.zip`，能回滚功能、不能保证字节一致；平台侧若要精确回退需重新上传。
 3. 未执行的硬门禁：产品 non-goal 签字（m00002 起一直未拍板）、Chrome 61 真机、`verify:all` 全量（本轮只跑了 `tsc` + 单测 + build + 预算）。
+
+## 10. 真机预览反馈：卡片没出现（2026-11-08 22:56）
+
+用户实测 0.2.0 预览包：**能进、首页 footer 文案已是新版**（证明产物本身在容器里跑起来了），但结算页**没有排行榜卡片，也没有弹出任何授权询问**。
+
+### 10.1 为什么「没有卡片」现在等于「不知道」
+
+`degrade()` 把五类原因压成同一个 `hidden`：无 `window.xhs`、`xhs.miniTool` 缺方法、客户端版本 < 9.51、1005/1006 未授权、10003 白名单拒绝。用户可见结果完全一致，本地也没有控制台可读——**这是我们自己的可观测性缺口**，不是平台问题。不补监控就送审，等于盲发。
+
+### 10.2 诊断包（一次性，不进送审）
+
+- 构建期开关：`MINITOOL_RANK_DEBUG=1` 时 `vitest` 配置注入 `__RANK_DEBUG__ = true`，`src/debug/rankProbe.tsx` 在页面顶部渲染黑色自证面板；默认构建注入 `false`，整段被摇掉——实测 `grep "RANK DEBUG"` 在生产 `dist/` 与 `dist-minitool/` 均 **0 命中**。
+- 面板逐条打印：`xhs` 是否存在、`miniTool` 的键、同步 `launchOptions`、异步 `getLaunchOptions()` 结果、算出的 `buildVersion`、`ver>=9510` 判定、`api` 是否齐全、`getMyRank` / `submitScore` 的原始返回或错误码（附 `mapError` 归类）。
+- 本地用 Chrome + 桩容器验证过渲染：桩给 1005 → 面板显示 `getMyRank ERR {code:1005, kind:"unauthorized"}`，桩给 `getLaunchOptions` → `ver>=9510: PASS`。
+- 诊断包：`red_app/B49xBoJuE-VyX-IPHynCW3soIRhtl0wJR90o-yVTwboSJ3c.zip`（45,776 B，5 文件，audit PASS），二维码 `minitool/preview-qr-8.png`。
+
+### 10.3 顺带记一条打包陷阱
+
+`vite build` 的 `emptyOutDir` 会清掉 `mini_tool.json`，**`write_manifest` 必须在 postprocess 之后重新跑**。漏跑时 `audit_artifact.mjs` 只报 `PASS: 4 file(s)` 而不报错——按文件数自查（应为 5：`index.html` / `mini_tool.json` / `assets/{app,compat,style}.{js,css}`）比看 PASS 更可靠。

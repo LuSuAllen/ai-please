@@ -4,6 +4,7 @@ import { HomeScreen } from './screens/HomeScreen';
 import { ResultScreen } from './screens/ResultScreen';
 import { useGame } from './hooks/useGame';
 import { hasResumableSave, loadMeta, loadRun, loadRunAsync, type Meta, type SavedRun } from './game/storage';
+import { RANK_DEBUG_ENABLED, RankProbe } from './debug/rankProbe';
 import { getBlueprint } from './data/levels';
 
 /** 验收脚本用 ?day=D01&seed=20261024 直接进入确定的一局；普通玩家不带参数。 */
@@ -54,6 +55,7 @@ export default function App() {
 
   return (
     <div className="shell">
+      {RANK_DEBUG_ENABLED ? <RankProbe /> : null}
       {storageFailure ? (
         <div className="storage-warning" role="status" aria-live="polite">
           本局尚未保存，仍可继续；刷新或关闭可能丢失进度。

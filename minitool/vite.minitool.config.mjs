@@ -13,6 +13,10 @@ const preactAlias = [
 
 export default defineConfig({
   base: './',
+  define: {
+    // 诊断包专用：MINITOOL_RANK_DEBUG=1 构建时才会把排行榜自证面板打进产物
+    __RANK_DEBUG__: JSON.stringify(process.env.MINITOOL_RANK_DEBUG === '1'),
+  },
   plugins: [react()],
   resolve: { alias: preactAlias },
   build: {

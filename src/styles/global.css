@@ -1,7 +1,7 @@
 .storage-warning {
   position: fixed;
   z-index: 100;
-  top: max(8px, env(safe-area-inset-top));
+  top: var(--pad-top);
   left: 50%;
   width: min(92vw, 430px);
   transform: translateX(-50%);
@@ -38,6 +38,11 @@
 
   --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
   --pad: 12px;
+  /* 容器全屏时避让状态栏/圆角：安全区 + 额外留白（env 不支持时退化为固定留白） */
+  /* 容器全屏留白：webview 从屏幕顶部开始，系统状态栏（~32px）+ 容器导航条（~44px）
+     都浮在页面上方，env() 无法覆盖；固定预留 104px 顶部 / 56px 底部，避免 R 角与导航条压住内容 */
+  --pad-top: 104px;
+  --pad-bottom: 56px;
   --radius: 0px;
 }
 
@@ -154,7 +159,7 @@ button {
   position: relative;
   z-index: 20;
   flex: none;
-  padding: calc(env(safe-area-inset-top, 0px) + 8px) var(--pad) 8px;
+  padding: var(--pad-top) var(--pad) 10px;
   background: linear-gradient(180deg, #0a1322, #070c16);
   border-bottom: 2px solid var(--line);
 }
@@ -611,7 +616,7 @@ button {
   position: relative;
   z-index: 30;
   flex: none;
-  padding: 9px var(--pad) calc(env(safe-area-inset-bottom, 0px) + 9px);
+  padding: 9px var(--pad) var(--pad-bottom);
   background: linear-gradient(180deg, #080e1a, #050810);
   border-top: 2px solid var(--line);
 }
@@ -750,7 +755,7 @@ button {
 
 .sheet-foot {
   flex: none;
-  padding: 10px 11px calc(env(safe-area-inset-bottom, 0px) + 10px);
+  padding: 10px 11px 12px;
   border-top: 2px solid var(--line);
   background: var(--panel);
 }
@@ -765,6 +770,10 @@ button {
   justify-content: flex-end;
   background: rgba(4, 6, 11, 0.7);
   animation: fade-in 120ms steps(3, end);
+}
+
+.drawer .sheet-foot {
+  padding-bottom: var(--pad-bottom);
 }
 
 .drawer-panel {
@@ -877,7 +886,7 @@ button {
   flex-direction: column;
   justify-content: center;
   gap: 14px;
-  padding: calc(env(safe-area-inset-top, 0px) + 22px) 18px calc(env(safe-area-inset-bottom, 0px) + 22px);
+  padding: calc(var(--pad-top) + 14px) 18px calc(var(--pad-bottom) + 14px);
   text-align: center;
 }
 
@@ -959,7 +968,7 @@ button {
   display: flex;
   flex-direction: column;
   gap: 11px;
-  padding: calc(env(safe-area-inset-top, 0px) + 14px) var(--pad) calc(env(safe-area-inset-bottom, 0px) + 14px);
+  padding: calc(var(--pad-top) + 10px) var(--pad) calc(var(--pad-bottom) + 10px);
 }
 
 .result-head {
@@ -1063,7 +1072,7 @@ button {
   position: absolute;
   left: var(--pad);
   right: var(--pad);
-  top: calc(env(safe-area-inset-top, 0px) + 104px);
+  top: calc(var(--pad-top) + 108px);
   z-index: 65;
   animation: slide-down 180ms steps(4, end);
 }
@@ -1693,7 +1702,7 @@ button {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 10px 11px calc(env(safe-area-inset-bottom, 0px) + 10px);
+  padding: 10px 11px var(--pad-bottom);
   border-top: 2px solid var(--line);
   background: var(--panel);
 }

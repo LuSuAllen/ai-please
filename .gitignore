@@ -3,3 +3,6 @@ dist/
 .DS_Store
 *.log
 .DS_Store
+dist-minitool/
+ai-please-minitool.zip
+minitool/preview-*.png

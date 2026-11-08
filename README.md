@@ -80,6 +80,12 @@ npm run verify:zh           # 双语注释探针：320/390 两档，中文副注
 `npm ci` → `npm test` → 构建 → `verify:budget` → 上传 Pages 产物 → 发布。
 生产构建 base 为 `/ai-please/`，本地 dev 为 `/`（见 `vite.config.ts`）。
 
+### 小红书小工具（0.1.0，审核中）
+
+同一份源码另有一条离线包链路：`minitool/vite.minitool.config.mjs`（相对路径 + IIFE）→ `minitool/postprocess.mjs`（去 module、CSS 老内核回退、flex-gap 兜底）→ 审计 → zip → `redapp upload / submit`。
+版本 `0.1.0`、appId `6aef424dfae1a5001578fb19`、当前 `status=1 审核中`；全屏留白固定 `--pad-top:104px / --pad-bottom:56px`（容器内 `env()` 恒为 0）。
+上手、复现与换机步骤见 [docs/minitool-0.1.0-release.md](docs/minitool-0.1.0-release.md)。
+
 ## 版本控制约定
 
 分支流程见 [docs/GIT_WORKFLOW.md](docs/GIT_WORKFLOW.md)（`feat/*` → PR → `verify:all` 绿 → 合并 `main` → 自动发布）。

@@ -1,7 +1,7 @@
 # PROJECT STATUS — AI, PLEASE / AI SERVICE BORDER INSPECTOR
 
 > 本文件是唯一事实来源。凡是没在这里贴出验证证据的东西，一律视为"未测试"。
-> 最后更新：2026-10-24（第六轮：多关卡 + 种子随机化，30 位访客 / 3 天 / 20 个模板与卡池；本地 10 场景 241 断言 + 47 单测全过）
+> 最后更新：2026-11-07（第十七轮：小工具 0.1.0 送审，appId `6aef424dfae1a5001578fb19`，`status=1` 审核中；门禁 `verify:all` 全绿）
 
 ---
 
@@ -1088,3 +1088,46 @@ npm run verify:all     # 本地合并门禁（实测约 24 秒：build 1.9 / 单
 | `.pp-open` / 抽屉关闭 / 放大层按钮降到 24px 视觉 + 44px 命中 | 未做 | 需把 `touch-target-min-40` 改成命中区断言，属验收口径变更 |
 | 跨屏按钮高漂移（`.btn` 52 / `.btn-wide` 46 / `.btn-ghost` 40→46） | 部分收敛 | 本轮只收敛「同一行/同一列表」，跨屏 token 收敛另立一轮 |
 | 删 `.pp-open`（同义入口 3→1） | 未做 | 沿用第十五轮结论，仍需同步改 `querySelectorAll` 断言 |
+
+## 23. 第十七轮：小工具上架 0.1.0（送审）（2026-11-07）
+
+> 完整接手文档：`docs/minitool-0.1.0-release.md`（环境装配 / 打包链路 / 换机步骤 / 全部坑）。本节只记结论与证据。
+
+### 23.1 改了什么
+
+| 文件 | 内容 |
+| --- | --- |
+| `src/styles/global.css` | 新增 `--pad-top: 104px` / `--pad-bottom: 56px` 固定留白；`.statusbar` 顶部、`.actionbar` 底部吃这两个值；`.home`/`.result`/`.toast-wrap`/`.storage-warning` 同步偏移；`.sheet-foot` 恢复 12px，仅 `.drawer .sheet-foot` 避让底部 |
+| `minitool/vite.minitool.config.mjs` | 小工具专用构建：`base: './'`、IIFE 单文件、`inlineDynamicImports`、`target: ['es2017','chrome61']`、`assetsInlineLimit: 0` |
+| `minitool/postprocess.mjs` | 去 `type="module"`/`crossorigin` 并补 `defer`、注入 `compat.js`；CSS 回退 `env()/min()/max()/clamp()/dvh`、补 `-webkit-backdrop-filter` 与 `aspect-ratio` 宽度、grid 补 `grid-gap`、flex 生成 `html.no-flex-gap` 兜底规则；最后断言无 module/内联脚本/现代函数残留 |
+| `docs/brand/`（新入库） | `make-icon.py` 程序化生成：1024² 图标（护照 + APPROVED 章）、1152×1536 封面、512/256/128/64、favicon、contact sheet |
+| `minitool/submit.json` / `preview.json` | 可入库的提交载荷：名称/简介/icon/cover/version/pkgFileId/md5/分类/授权（无凭证） |
+| `.gitignore` | 忽略 `dist-minitool/`、`ai-please-minitool.zip`、`minitool/preview-*.png` |
+
+### 23.2 为什么留白用固定值（这条决定改了三轮）
+
+小工具全屏时 webview 从屏幕最顶端开始渲染，系统状态栏与容器导航条（返回/分享/更多）都浮在网页上方；**容器内 `env(safe-area-inset-*)` 取到 0**，之前按环境变量留白（env + 8/9/16px）实测被压住。改为固定 104/56 后，官方本地模拟器（`redapp dev`，与线上同一运行时壳）实测：容器导航条 y≈190，游戏品牌行 y≈224，净空约 34px；底部操作栏距屏幕底边 56px。
+
+### 23.3 证据
+
+| 项 | 结果 |
+| --- | --- |
+| `npm run verify:all` | 全绿：build 1.7s / unit 0.7s / budget 0.2s / acceptance 20 场景 18.6s / zh probe 10.1s |
+| 单元测试 | 61/61 pass |
+| 产物审计 | 目录 PASS 5 files 0 warning；zip PASS（打包前审计目录，打包后再审计 zip） |
+| zip | `ai-please-minitool.zip` 42,650 B · 5 文件（`index.html` 在根、`assets/{app.js,style.css,compat.js}`、`mini_tool.json`） · md5 `c4d23f10…` |
+| 上传 | pkgFileId `red_app/4U85AZsYPq_dEuDQeDR7XeMmWQ_cA0G37-kMwUanbTp8T6c.zip` |
+| 送审 | appId `6aef424dfae1a5001578fb19`，version 0.1.0，`status=1` 审核中，gmtCreate 2026-11-07 23:22:53 |
+| 素材一致性 | 平台 CDN 实际存储图与本地 sha256 完全一致（icon `e22d0e2f…`、cover `dc120e26…`） |
+| 模拟器 | 首页 / 教学弹窗 / 对局三屏截图，无 console error、无横向溢出 |
+| 真机 | ⬜ Android / iOS 均未测（审核通过后补） |
+
+### 23.4 已知取舍与坑
+
+| 项 | 状态 | 原因 |
+| --- | --- | --- |
+| `emptyOutDir` 清掉 `mini_tool.json` | 已规避 | 每次 build 后必须重跑 `write_manifest.mjs`，否则 zip 少文件（本轮真实踩到） |
+| classic 脚本不延迟 | 已规避 | 去掉 `type="module"` 后必须补 `defer`，否则 `#root` 尚未挂载即执行 |
+| 送审门禁 | 已遵守 | 用户扫码预览并明确「预览通过，可以送审」后才 `submit --confirm` |
+| 版本线 | 0.1.0 | 首版用 0.x；真机验证后再升 1.0.0 |
+| 授权范围 | 无平台授权 | 仅 localStorage（已 try/catch 降级），未申请相册/相机/麦克风/位置 |

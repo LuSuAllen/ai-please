@@ -709,3 +709,44 @@ node ~/.dsh/skills/minitool-zip-builder/scripts/audit_artifact.mjs ai-please-min
 ---
 
 **最后一句：** 这个方案的上限不是前端写得多漂亮，而是平台给不给资格、给不给授权。P0 门禁不过，所有 UI 都是自嗨；P0 过了，按 5–8 人日分阶段交付，别一口吃成胖子。
+
+---
+
+## 8. P1 实施记录（分支 `feat/minitool-leaderboard`）
+
+**范围收口**：只做「提交我的成绩 → 显示昵称 → 本周分数 → 本周名次」。
+好友榜、头像、可切换的月/日榜、全量前 100 列表一律不做——不是没时间，是这些都要额外授权面，与本次「小范围」口径不符。
+
+### 8.1 落地文件
+
+| 文件 | 职责 |
+| --- | --- |
+| `src/game/leaderboard.ts` | 纯适配层：榜位映射、分数校验、昵称归一化、错误码归档、2002 退避重试、`readMyRank` |
+| `src/hooks/useLeaderboardRank.ts` | 状态机：版本门槛 → 提交（模块级去重，StrictMode 双挂载安全）→ 读名次 → 前 100 名补昵称 |
+| `src/screens/ResultScreen.tsx` | 结算页 `LeaderboardPanel`，全部复用 `.panel` / `.result-cell`，零新增 CSS、零动画 |
+| `src/screens/HomeScreen.tsx` | 首页口径修正：`无后端 / 无 API / 可离线` → `单机可离线 · 排行榜需小红书客户端联网` |
+
+### 8.2 平台能力映射
+
+| 文档能力 | 本次用法 |
+| --- | --- |
+| `submitScore({board, score})` | 结算页挂载时上行一次，key = `day:seed:score`；分数先过 ±1,000,000 本地校验 |
+| `getMyRank({board, period})` | `period='week'`，先判 `status` 再决定文案 |
+| `getRankList({board, period})` | **只在** `EXACT && rank ≤ 100` 时补一次，为拿昵称；101–500 名不白打接口 |
+
+降级矩阵：`2002 / 2009 / 无 errCode` → 卡片显示「排行榜暂不可用」+ 重试；`1005 / 1006 / 10003 / 1004` → 整卡隐藏，游戏其余部分不受影响。
+
+### 8.3 验收证据（2026-11-08）
+
+- `npm test` → **80 pass / 0 fail**，其中 `tests/leaderboard.test.ts` 新增 19 条断言（含「候选关卡必须登记榜位」「101–500 名不查列表」「只有 2002 重试」）。
+- `npm run build` → 通过；首屏 JS gzip 35.70 kB / 70 kB，首屏 CSS 5.87 kB / 6.2 kB，总产物 133.22 kB / 260 kB。
+- 小工具产物 → `style.css` gzip 5.90 kB、`app.js` gzip 37.80 kB；`audit_artifact.mjs dist-minitool` → PASS 4 files / 0 warning；`ai-please-minitool.zip` 44,129 B，审计 PASS。
+- 排版取证（Chrome CDP，`Emulation.setDeviceMetricsOverride`，320 / 375 / 390 / 430 四档）→ `scrollWidth === clientWidth`，横向溢出元素 0 个，`.panel .tag` 右边缘始终在视口内。
+- 复盘一个数字口径：评估稿引用的 `6,236 B` 与构建器报的 `5.90 kB` 差异来自压缩参数，不是样式被删；以构建器输出为准，当前在 6.2 kB 预算内。
+
+### 8.4 仍未验证（必须在上线前补）
+
+1. **授权勾选**：创服后台「用户头像昵称授权」未勾选时，`submitScore` 返回 1005，卡片会整块隐藏——这是设计行为，不是 bug，但线上等于没功能。
+2. **白名单 / 内测资格**：10003 未开通时同上隐藏。
+3. **真机容器**：`window.xhs.miniTool` 在 9.51+ 容器内是否存在、`buildVersion` 是否可读，本地只能用注入桩验证；真机需上传体验版实测一次。
+4. 昵称在 101–500 名不可得，属平台限制；文案已说明「前 100 名才显示昵称」，不假装有数据。

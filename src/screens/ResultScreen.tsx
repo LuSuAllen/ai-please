@@ -1,6 +1,8 @@
 import type { GameState } from '../types/game';
 import { endingOf } from '../game/ending';
 import { gradeOf } from '../game/engine';
+import type { MyRank } from '../game/leaderboard';
+import { useLeaderboardRank, type RankView } from '../hooks/useLeaderboardRank';
 
 interface Props {
   state: GameState;
@@ -12,8 +14,97 @@ interface Props {
 /** 因豁免条款而通过的申请：维护豁免 / 特赦 / 紧急令覆盖 */
 const EXEMPT_TEMPLATES = new Set(['S-MAINT-UND', 'S-AMNESTY', 'C-OVERRIDE']);
 
+/** 平台口径：前 500 名有序，前 100 名才带昵称 */
+function rankLabel(my: MyRank): string {
+  if (my.status === 'EXACT') return my.rank === null ? '—' : `#${my.rank}`;
+  if (my.status === 'OVER_LIMIT') return '500+';
+  if (my.status === 'NO_SCORE') return '未上榜';
+  return '未参与';
+}
+
+function footLabel(view: Extract<RankView, { kind: 'ready' }>): string {
+  if (view.nickname) return `「${view.nickname}」 · 昵称由小红书提供`;
+  if (view.my.status === 'OVER_LIMIT') return '名次进了前 500 才会显示';
+  if (view.my.status === 'NO_SCORE') return '本周还没有你的成绩';
+  if (view.my.status === 'NOT_PARTICIPATING') return '本局成绩未计入排行榜';
+  return '前 100 名才显示昵称';
+}
+
+/** 榜单卡片：全部复用 .panel / .result-cell，不新增 CSS，也不放动画 */
+export function LeaderboardPanel({ view, retry }: { view: RankView; retry: () => void }) {
+  if (view.kind === 'hidden') return null;
+  return (
+    <div className="panel">
+      <div className="panel-head">
+        <span className="panel-title">
+          <span className="cn">本周排行榜</span>
+          <span className="bi-en">WEEKLY RANK</span>
+        </span>
+        <span className="tag amber">
+          <span className="cn">内测</span>
+        </span>
+      </div>
+      <div className="panel-body">
+        {view.kind === 'loading' ? (
+          <p className="vb-text" style={{ marginBottom: 0 }}>
+            正在同步本周成绩…
+          </p>
+        ) : null}
+        {view.kind === 'error' ? (
+          <p className="vb-text" style={{ marginBottom: 0 }}>
+            排行榜暂不可用。
+            <button
+              type="button"
+              onClick={retry}
+              style={{
+                background: 'transparent',
+                border: 0,
+                padding: '0 0 0 4px',
+                color: 'inherit',
+                font: 'inherit',
+                textDecoration: 'underline',
+                cursor: 'pointer',
+              }}
+            >
+              重试
+            </button>
+          </p>
+        ) : null}
+        {view.kind === 'ready' ? (
+          <>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+              <div className="result-cell">
+                <span className="k">本周成绩</span>
+                <span
+                  className={`v ${
+                    (view.my.score ?? 0) > 0 ? 'pos' : (view.my.score ?? 0) < 0 ? 'neg' : ''
+                  }`}
+                >
+                  {view.my.score ?? '—'}
+                </span>
+              </div>
+              <div className="result-cell">
+                <span className="k">本周名次</span>
+                <span className="v">{rankLabel(view.my)}</span>
+              </div>
+            </div>
+            <div className="home-sub2" style={{ marginTop: 6 }}>
+              {footLabel(view)}
+            </div>
+          </>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 export function ResultScreen({ state, bestScore, onRestart, onHome }: Props) {
   const run = state.run;
+  const { view: rankView, retry: retryRank } = useLeaderboardRank({
+    day: run?.day ?? null,
+    score: state.score,
+    seed: run?.seed ?? null,
+  });
   const visitors = run?.visitors ?? [];
   const total = run?.total ?? 0;
   const correct = state.records.filter((r) => r.isCorrect).length;
@@ -81,6 +172,8 @@ export function ResultScreen({ state, bestScore, onRestart, onHome }: Props) {
             ) : null}
           </div>
         </div>
+
+        <LeaderboardPanel view={rankView} retry={retryRank} />
 
         <div className="panel">
           <div className="panel-head">

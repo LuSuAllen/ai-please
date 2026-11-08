@@ -107,7 +107,7 @@ export function HomeScreen({ onStart, onResume, hasSave, meta, savedIndex, total
         </div>
 
         <div className="home-foot">
-          最高分 BEST SCORE {meta.bestScore} · 本作为虚构世界观 · 无后端 / 无 API / 可离线
+          最高分 BEST SCORE {meta.bestScore} · 本作为虚构世界观 · 单机可离线 · 排行榜需小红书客户端联网
         </div>
       </div>
 

@@ -1097,7 +1097,7 @@ npm run verify:all     # 本地合并门禁（实测约 24 秒：build 1.9 / 单
 
 | 文件 | 内容 |
 | --- | --- |
-| `src/styles/global.css` | 新增 `--pad-top: 104px` / `--pad-bottom: 56px` 固定留白；`.statusbar` 顶部、`.actionbar` 底部吃这两个值；`.home`/`.result`/`.toast-wrap`/`.storage-warning` 同步偏移；`.sheet-foot` 恢复 12px，仅 `.drawer .sheet-foot` 避让底部 |
+| `minitool/postprocess.mjs`（留白注入） | 产物 CSS 末尾追加 `:root{--pad-top:104px;--pad-bottom:56px}` 与 `.statusbar`/`.actionbar`/`.home`/`.result`/`.toast-wrap`/`.storage-warning`/`.sheet-foot`/`.drawer .sheet-foot` 覆盖段；`src/styles/global.css` 保持 `env()` 原样，网页版产物字节不变 |
 | `minitool/vite.minitool.config.mjs` | 小工具专用构建：`base: './'`、IIFE 单文件、`inlineDynamicImports`、`target: ['es2017','chrome61']`、`assetsInlineLimit: 0` |
 | `minitool/postprocess.mjs` | 去 `type="module"`/`crossorigin` 并补 `defer`、注入 `compat.js`；CSS 回退 `env()/min()/max()/clamp()/dvh`、补 `-webkit-backdrop-filter` 与 `aspect-ratio` 宽度、grid 补 `grid-gap`、flex 生成 `html.no-flex-gap` 兜底规则；最后断言无 module/内联脚本/现代函数残留 |
 | `docs/brand/`（新入库） | `make-icon.py` 程序化生成：1024² 图标（护照 + APPROVED 章）、1152×1536 封面、512/256/128/64、favicon、contact sheet |

@@ -123,6 +123,22 @@ ast.walkRules((rule) => {
   }
 });
 
+// 容器全屏留白只在小工具产物里生效：webview 从屏幕顶端渲染，系统状态栏与容器导航条
+// 都浮在页面上方，且容器内 env() 恒为 0，所以用固定值覆盖；网页版保持原 env() 安全区。
+const FULLSCREEN_INSET = [
+  ':root{--pad-top:104px;--pad-bottom:56px}',
+  '.statusbar{padding:var(--pad-top) var(--pad) 10px}',
+  '.actionbar{padding:9px var(--pad) var(--pad-bottom)}',
+  '.storage-warning{top:var(--pad-top)}',
+  '.sheet-foot{padding:10px 11px 12px}',
+  '.drawer .sheet-foot{padding-bottom:var(--pad-bottom)}',
+  '.home{padding:calc(var(--pad-top) + 14px) 18px calc(var(--pad-bottom) + 14px)}',
+  '.result{padding:calc(var(--pad-top) + 10px) var(--pad) calc(var(--pad-bottom) + 10px)}',
+  '.toast-wrap{top:calc(var(--pad-top) + 108px)}',
+].join('\n');
+ast.append(FULLSCREEN_INSET);
+report.css.push('容器全屏留白已注入：--pad-top 104px / --pad-bottom 56px（仅小工具产物）');
+
 if (flexRules.length) {
   ast.append(flexRules.join('\n'));
 }

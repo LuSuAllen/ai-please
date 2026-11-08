@@ -121,16 +121,24 @@ redapp submit --source thirdAgent --file ./minitool/submit.json --confirm "<plan
 
 小工具全屏时 **webview 从屏幕最顶部开始渲染**，系统状态栏（约 32–59px）和容器自带导航条（返回 / 分享 / 更多，约 44px）都浮在网页上方；容器里 `env(safe-area-inset-*)` 取到的是 0，靠它留白必然被压住。
 
-`src/styles/global.css`：
+**留白只注入小工具产物，网页版保持原样**：`src/styles/global.css` 仍用 `env(safe-area-inset-*)`（浏览器里是对的），
+`minitool/postprocess.mjs` 在产物 CSS 末尾追加覆盖段：
 
 ```css
---pad-top: 104px;   /* 状态栏 + 容器导航条 + 呼吸 */
---pad-bottom: 56px; /* home indicator / 三键导航 + 呼吸 */
+:root{--pad-top:104px;--pad-bottom:56px}
+.statusbar{padding:var(--pad-top) var(--pad) 10px}
+.actionbar{padding:9px var(--pad) var(--pad-bottom)}
+.storage-warning{top:var(--pad-top)}
+.sheet-foot{padding:10px 11px 12px}
+.drawer .sheet-foot{padding-bottom:var(--pad-bottom)}
+.home{padding:calc(var(--pad-top) + 14px) 18px calc(var(--pad-bottom) + 14px)}
+.result{padding:calc(var(--pad-top) + 10px) var(--pad) calc(var(--pad-bottom) + 10px)}
+.toast-wrap{top:calc(var(--pad-top) + 108px)}
 ```
 
-- `.statusbar` 顶部、`.actionbar` 底部吃这两个值；`.home` / `.result` / `.toast-wrap` / `.storage-warning` 同步偏移
-- `.sheet-foot` 恢复常规 12px，只有贴底抽屉 `.drawer .sheet-foot` 才避让底部
-- 取值是固定常量（不是 `env()` 或 `max()`），Chrome 61 直接可用，后处理也无需回退
+- 固定常量（不是 `env()`/`max()`），Chrome 61 直接可用，后处理无需再回退
+- 网页版产物与改动前字节一致（`dist/assets/index-C3gikYer.css` 哈希未变），不会给官网带来 104px 空档
+- 送审的 0.1.0 包是更早一版「直接写进 `:root`」的产物，**视觉等价、字节不同**；0.1.1 起以本链路为准
 
 官方本地模拟器复现命令（能同时看到状态栏与容器导航条，是本轮唯一可信的验收方式）：
 

@@ -740,9 +740,10 @@ node ~/.dsh/skills/minitool-zip-builder/scripts/audit_artifact.mjs ai-please-min
 
 - `npm test` → **80 pass / 0 fail**，其中 `tests/leaderboard.test.ts` 新增 19 条断言（含「候选关卡必须登记榜位」「101–500 名不查列表」「只有 2002 重试」）。
 - `npm run build` → 通过；首屏 JS gzip 35.70 kB / 70 kB，首屏 CSS 5.87 kB / 6.2 kB，总产物 133.22 kB / 260 kB。
-- 小工具产物 → `style.css` gzip 5.90 kB、`app.js` gzip 37.80 kB；`audit_artifact.mjs dist-minitool` → PASS 4 files / 0 warning；`ai-please-minitool.zip` 44,129 B，审计 PASS。
+- 小工具产物（**必须含 postprocess 环节**）→ `style.css` raw 28,212 B / gzip -9 6,236 B、`app.js` gzip -9 37,329 B、`compat.js` 540 B；`audit_artifact.mjs dist-minitool` → PASS 5 files / 0 warning；`ai-please-minitool.zip` 44,888 B，审计 PASS。
+  - 早先记录的「PASS 4 files / 44,129 B」是漏跑 `node minitool/postprocess.mjs` 的无效产物（`index.html` 仍是 `type="module" crossorigin`、无 `compat.js`、CSS 缺 `--pad-top:104px` 与 gap 回退），已作废。
 - 排版取证（Chrome CDP，`Emulation.setDeviceMetricsOverride`，320 / 375 / 390 / 430 四档）→ `scrollWidth === clientWidth`，横向溢出元素 0 个，`.panel .tag` 右边缘始终在视口内。
-- 复盘一个数字口径：评估稿引用的 `6,236 B` 与构建器报的 `5.90 kB` 差异来自压缩参数，不是样式被删；以构建器输出为准，当前在 6.2 kB 预算内。
+- 数字口径（已复核，含 0.1.0 对照构建）：`scripts/check-budget.mjs` 的 6,200 B 只作用于 `dist/`（网页产物，当前 5,890 B，绿），不覆盖小工具 zip。小工具 CSS 6,236 B 是 postprocess 回退段的固有开销——在 worktree 里重建 0.1.0（c8beb1b）得到 raw 28,212 B / gzip 6,236 B，与本分支**完全相同**，即排行榜新增 0 字节 CSS（app.js gzip 35,221 → 37,329，+2,108 B）。
 
 ### 8.4 仍未验证（必须在上线前补）
 
@@ -750,3 +751,18 @@ node ~/.dsh/skills/minitool-zip-builder/scripts/audit_artifact.mjs ai-please-min
 2. **白名单 / 内测资格**：10003 未开通时同上隐藏。
 3. **真机容器**：`window.xhs.miniTool` 在 9.51+ 容器内是否存在、`buildVersion` 是否可读，本地只能用注入桩验证；真机需上传体验版实测一次。
 4. 昵称在 101–500 名不可得，属平台限制；文案已说明「前 100 名才显示昵称」，不假装有数据。
+
+## 9. 0.2.0 发版状态（2026-11-08 21:37）
+
+| 环节 | 状态 | 证据 |
+| --- | --- | --- |
+| 版本号 | 0.2.0 | `package.json` / `package-lock.json` / `minitool/submit.json` / `minitool/preview.json` 已统一 |
+| 代码包上传 | ✅ 已完成 | upload confirm → `fileId=red_app/j7-K0DblfxBZjyNG2f4WzcM1QuFdSJVECvyWE2RyA1W4SG8.zip`，`md5=e4024120971d4f25b5c16eef1866ef71`，44,888 B |
+| 手机预览 | ✅ 已生成 | `previewUrl=xhsdiscover://miniTool/6af07b0b261c1b00157cef08_develop?xhsMpScreenMode=full`，二维码 `minitool/preview-qr-5.png`（本地，`.gitignore` 忽略） |
+| 送审 submit | ⛔️ 未执行 | 阻塞：①「用户头像昵称授权」在 CLI 无对应 code（`redapp config` 仅 photos/camera/microphone/location），必须网页创服后台勾选；②需用户扫码回复「预览通过，可以送审」 |
+
+补充结论：
+
+1. **授权是运行时开关，不是构建开关**。未勾选时卡片整块 `hidden`（1005/1006/10003/1004 一律降级），线上唯一可见差异是首页 footer 文案。因此预览能验「降级干净」，不能验「功能可用」；功能可用的唯一验证路径是真机 + 已勾授权。
+2. **0.1.0 没有字节级回滚资产**。在 worktree 用 c8beb1b 重建的 zip md5 为 `9449a07be81b15e65a930ba0c2490392`，与送审时的 `c4d23f10883a29c9353bac2e645b1434` 不一致（压缩时间戳/条目顺序），已存档到 `~/Downloads/ai-please-artifacts/ai-please-0.1.0-rebuilt-9449a07b.zip`，能回滚功能、不能保证字节一致；平台侧若要精确回退需重新上传。
+3. 未执行的硬门禁：产品 non-goal 签字（m00002 起一直未拍板）、Chrome 61 真机、`verify:all` 全量（本轮只跑了 `tsc` + 单测 + build + 预算）。

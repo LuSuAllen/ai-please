@@ -1,11 +1,12 @@
 {
+  "appId": "6aef424dfae1a5001578fb19",
   "appName": "AI, PLEASE",
   "slogan": "边境审核模拟器",
   "iconFileId": "red_skill_tool_image/LQv1wLKxboOzmYCH9NGocOe7QI01vvR9KK1wXsqcxPsWFzE.png",
   "coverFileId": "red_skill_tool_image/ARUQouEvLbt7zwLzA9okBLlyjz1kkiCd6EKahhBWsnaJkYo.png",
-  "version": "0.1.0",
-  "pkgFileId": "red_app/4U85AZsYPq_dEuDQeDR7XeMmWQ_cA0G37-kMwUanbTp8T6c.zip",
-  "md5": "c4d23f10883a29c9353bac2e645b1434",
+  "version": "0.2.0",
+  "pkgFileId": "red_app/j7-K0DblfxBZjyNG2f4WzcM1QuFdSJVECvyWE2RyA1W4SG8.zip",
+  "md5": "e4024120971d4f25b5c16eef1866ef71",
   "categories": [
     "casual_game"
   ],

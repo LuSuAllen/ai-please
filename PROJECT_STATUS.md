@@ -1,7 +1,7 @@
 # PROJECT STATUS — AI, PLEASE / AI SERVICE BORDER INSPECTOR
 
 > 本文件是唯一事实来源。凡是没在这里贴出验证证据的东西，一律视为"未测试"。
-> 最后更新：2026-11-07（第十七轮：小工具 0.1.0 送审，appId `6aef424dfae1a5001578fb19`，`status=1` 审核中；门禁 `verify:all` 全绿）
+> 最后更新：2026-11-08（第十八轮：0.1.0 已过审上线（`status=2` 已发布）；0.2.0 接入排行榜内测，包已上传、待扫码预览后送审。依据：`redapp list` 2026-11-08 21:34 → status=2 / version=0.1.0 / gmtUpdate 2026-11-07 23:28:23）
 
 ---
 

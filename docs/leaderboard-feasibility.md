@@ -785,3 +785,39 @@ node ~/.dsh/skills/minitool-zip-builder/scripts/audit_artifact.mjs ai-please-min
 ### 10.3 顺带记一条打包陷阱
 
 `vite build` 的 `emptyOutDir` 会清掉 `mini_tool.json`，**`write_manifest` 必须在 postprocess 之后重新跑**。漏跑时 `audit_artifact.mjs` 只报 `PASS: 4 file(s)` 而不报错——按文件数自查（应为 5：`index.html` / `mini_tool.json` / `assets/{app,compat,style}.{js,css}`）比看 PASS 更可靠。
+
+## 11. 定因：1005 未授权（2026-11-08 23:00 真机截图）
+
+诊断包在 iPhone（iOS，`env: develop`，预览 appId `6af08de1fae1a5001578ffb0`，客户端 `buildVersion=9530833` → 9.53.0）上的原始输出：
+
+```text
+xhs: yes
+mtKeys: share,addCloudStorage,...,submitScore,getRankList,getMyRank,...,getLaunchOptions,...,version   （44 项，排行榜三件齐全）
+syncLaunch: {"miniToolEnv":{"buildVersion":9530833,"interaction":"interactive","platform":"iOS","env":"develop","appId":"6af08de1..."},...}
+buildVersion(sync): 9530000
+ver>=9510: PASS
+api: ok
+getMyRank ERR: {"code":1005,"mapped":{"kind":"unauthorized"}}
+submitScore ERR: {"code":1005,"mapped":{"kind":"unauthorized"}}
+submitMapped: {"kind":"unauthorized","code":1005}
+```
+
+官方文档 §3.17「⚠️ 上传授权」原文：
+
+> 使用 `submitScore` 的小工具，上传至创服平台时**必须勾选「用户头像昵称授权」**，榜单展示的用户昵称依赖该授权；未勾选时排行榜调用会按未授权失败处理（errCode 1005），应隐藏排行榜入口并降级。
+
+结论：**卡片隐身是设计正确的降级，根因是上传时没勾授权**，不是代码、不是版本（9.53 ≫ 9.51）、也不是白名单（白名单会是 10003）。
+
+### 11.1 由此暴露的流程约束
+
+`redapp config` 的授权清单只有 `photos / camera / microphone / location`，**CLI 上传路径无法声明「用户头像昵称授权」**。所以 0.2.0 这一版必须走网页创服平台（<https://creator.xiaohongshu.com/new/red-app>）上传并勾选；CLI `submit` 链路在本特性上不可用——它能送审，但送出去的包永远拿不到昵称。
+
+### 11.2 待验证
+
+1. 勾选授权后是否仍会撞 10003 白名单（内测资格）——只有重新上传并再跑一次诊断包才能确认。
+2. 网页上传会生成新的包 fileId，`minitool/submit.json` 里的 `pkgFileId/md5` 随之失效；若后续回到 CLI 送审，需要重新绑定。
+
+### 11.3 送审用产物（已核对）
+
+- `ai-please-minitool.zip`，44,888 B，md5 `e4024120971d4f25b5c16eef1866ef71`，5 文件（`index.html` / `mini_tool.json` / `assets/{app,compat,style}.{js,css}`）。
+- 诊断代码确认不在包内：`unzip -p ai-please-minitool.zip assets/app.js | grep -c "RANK DEBUG"` → `0`。
